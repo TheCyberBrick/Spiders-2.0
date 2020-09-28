@@ -13,6 +13,7 @@ import com.google.common.collect.ImmutableList;
 import net.minecraft.block.BlockState;
 import net.minecraft.command.arguments.EntityAnchorArgument.Type;
 import net.minecraft.entity.CreatureEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
@@ -35,6 +36,7 @@ import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
 import tcb.spiderstpo.common.Matrix4f;
+import tcb.spiderstpo.common.SpiderMod;
 import tcb.spiderstpo.common.entity.movement.AdvancedClimberPathNavigator;
 import tcb.spiderstpo.common.entity.movement.AdvancedGroundPathNavigator;
 import tcb.spiderstpo.common.entity.movement.ClimberLookController;
@@ -82,6 +84,9 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 	protected float collisionsInclusionRange = 2.0f;
 	protected float collisionsSmoothingRange = 1.25f;
 
+	private float nextStepDistance, nextFlap;
+	private Vector3d preWalkingPosition;
+
 	public AbstractClimberEntity(EntityType<? extends AbstractClimberEntity> type, World world) {
 		super(type, world);
 		this.stepHeight = 0.1f;
@@ -92,10 +97,15 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 	@Override
 	protected void registerData() {
 		super.registerData();
-		for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
-			this.dataManager.register(pathingTarget, Optional.empty());
+
+		if(SpiderMod.DEBUG) {
+			for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
+				this.dataManager.register(pathingTarget, Optional.empty());
+			}
 		}
+
 		this.dataManager.register(ROTATION_BODY, new Rotations(0, 0, 0));
+
 		this.dataManager.register(ROTATION_HEAD, new Rotations(0, 0, 0));
 	}
 
@@ -376,21 +386,23 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 			look = this.getOrientation(1).getDirection(this.rotationYawHead, 0.0f);
 			this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
 
-			Path path = this.getNavigator().getPath();
-			if(path != null) {
-				int i = 0;
-				for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
-					if(path.getCurrentPathIndex() + i < path.getCurrentPathLength()) {
-						PathPoint point = path.getPathPointFromIndex(path.getCurrentPathIndex() + i);
-						this.dataManager.set(pathingTarget, Optional.of(new BlockPos(point.x, point.y, point.z)));
-					} else {
+			if(SpiderMod.DEBUG) {
+				Path path = this.getNavigator().getPath();
+				if(path != null) {
+					int i = 0;
+					for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
+						if(path.getCurrentPathIndex() + i < path.getCurrentPathLength()) {
+							PathPoint point = path.getPathPointFromIndex(path.getCurrentPathIndex() + i);
+							this.dataManager.set(pathingTarget, Optional.of(new BlockPos(point.x, point.y, point.z)));
+						} else {
+							this.dataManager.set(pathingTarget, Optional.empty());
+						}
+						i++;
+					}
+				} else {
+					for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 						this.dataManager.set(pathingTarget, Optional.empty());
 					}
-					i++;
-				}
-			} else {
-				for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
-					this.dataManager.set(pathingTarget, Optional.empty());
 				}
 			}
 		}
@@ -398,7 +410,10 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 	@Nullable
 	public BlockPos getPathingTarget(int i) {
-		return this.dataManager.get(PATHING_TARGETS.get(i)).orElse(null);
+		if(SpiderMod.DEBUG) {
+			return this.dataManager.get(PATHING_TARGETS.get(i)).orElse(null);
+		}
+		return null;
 	}
 
 	public float getVerticalOffset(float partialTicks) {
@@ -415,7 +430,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		double baseStickingOffsetZ = 0.0f;
 		Vector3d baseOrientationNormal = new Vector3d(0, 1, 0);
 
-		if(!this.isTravelingInFluid && this.onGround) {
+		if(!this.isTravelingInFluid && this.onGround && this.getRidingEntity() == null) {
 			Vector3d p = this.getPositionVec();
 
 			Vector3d s = p.add(0, this.getHeight() / 2, 0);
@@ -741,6 +756,8 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 	@Override
 	public void move(MoverType type, Vector3d pos) {
+		this.preWalkingPosition = this.getPositionVec();
+
 		double py = this.getPosY();
 
 		super.move(type, pos);
@@ -750,5 +767,76 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		}
 
 		this.onGround |= this.collidedHorizontally || this.collidedVertically;
+	}
+
+	@Override
+	protected BlockPos getOnPosition() {
+		float verticalOffset = this.getVerticalOffset(1);
+
+		int x = MathHelper.floor(this.getPosX() + this.stickingOffsetX - (float) this.orientationNormal.x * (verticalOffset + 0.2f));
+		int y = MathHelper.floor(this.getPosY() + this.stickingOffsetY - (float) this.orientationNormal.y * (verticalOffset + 0.2f));
+		int z = MathHelper.floor(this.getPosZ() + this.stickingOffsetZ - (float) this.orientationNormal.z * (verticalOffset + 0.2f));
+		BlockPos pos = new BlockPos(x, y, z);
+
+		if(this.world.isAirBlock(pos) && this.orientationNormal.y < 0.0f) {
+			BlockPos posDown = pos.down();
+			BlockState stateDown = this.world.getBlockState(posDown);
+
+			if(stateDown.collisionExtendsVertically(this.world, posDown, this)) {
+				return posDown;
+			}
+		}
+
+		return pos;
+	}
+
+	@Override
+	protected final boolean canTriggerWalking() {
+		if(this.preWalkingPosition != null && this.canActuallyTriggerWalking() && !this.isPassenger()) {
+			Vector3d moved = this.getPositionVec().subtract(this.preWalkingPosition);
+			this.preWalkingPosition = null;
+
+			BlockPos pos = this.getOnPosition();
+			BlockState state = this.world.getBlockState(pos);
+
+			double dx = moved.x;
+			double dy = moved.y;
+			double dz = moved.z;
+
+			Vector3d tangentialMovement = moved.subtract(this.orientationNormal.scale(this.orientationNormal.dotProduct(moved)));
+
+			this.distanceWalkedModified = (float)((double)this.distanceWalkedModified + tangentialMovement.length() * 0.6D);
+
+			this.distanceWalkedOnStepModified = (float)((double)this.distanceWalkedOnStepModified + (double)MathHelper.sqrt(dx * dx + dy * dy + dz * dz) * 0.6D);
+
+			if(this.distanceWalkedOnStepModified > this.nextStepDistance && !state.isAir(this.world, pos)) {
+				this.nextStepDistance = this.determineNextStepDistance();
+
+				if(this.isInWater()) {
+					Entity controller = this.isBeingRidden() && this.getControllingPassenger() != null ? this.getControllingPassenger() : this;
+
+					float multiplier = controller == this ? 0.35F : 0.4F;
+
+					Vector3d motion = controller.getMotion();
+
+					float swimStrength = MathHelper.sqrt(motion.x * motion.x * (double)0.2F + motion.y * motion.y + motion.z * motion.z * (double)0.2F) * multiplier;
+					if(swimStrength > 1.0F) {
+						swimStrength = 1.0F;
+					}
+
+					this.playSwimSound(swimStrength);
+				} else {
+					this.playStepSound(pos, state);
+				}
+			} else if(this.distanceWalkedOnStepModified > this.nextFlap && this.makeFlySound() && state.isAir(this.world, pos)) {
+				this.nextFlap = this.playFlySound(this.distanceWalkedOnStepModified);
+			}
+		}
+
+		return false;
+	}
+
+	protected boolean canActuallyTriggerWalking() {
+		return true;
 	}
 }
