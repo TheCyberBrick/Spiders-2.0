@@ -15,7 +15,7 @@ apply plugin: 'maven-publish'
 
 version = '1.0.0'
 group = 'tcb.spiderstpo'
-archivesBaseName = 'spiders-2.0'
+archivesBaseName = 'spiders-2.0-1.16.3'
 
 sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8' // Need this here so eclipse task generates correctly.
 
