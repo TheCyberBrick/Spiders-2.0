@@ -489,7 +489,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 	private static boolean isSuitablePoint(@Nullable PathPoint[] newPoints1, @Nullable PathPoint[] newPoints2, @Nullable PathPoint newPointDiagonal, boolean allowObstructions, boolean fitsThroughPoles, boolean allowOuterCorners) {
 		if(!allowOuterCorners) {
 			if(newPointDiagonal != null && !newPointDiagonal.visited && newPoints2 != null && newPoints2.length > 0 && (newPoints2[0] != null || (newPoints2.length > 1 && newPoints2[1] != null)) && newPoints1 != null && newPoints1.length > 0 && (newPoints1[0] != null || (newPoints1.length > 1 && newPoints1[1] != null))) {
-				if((newPoints1[0] == null || newPoints1[0].nodeType != PathNodeType.WALKABLE_DOOR) && (newPoints2[0] == null || newPoints2[0].nodeType != PathNodeType.WALKABLE_DOOR) && newPointDiagonal.nodeType != PathNodeType.WALKABLE_DOOR) {
+				if((newPoints1[0] == null || newPoints1[0].nodeType != PathNodeType.DOOR_OPEN) && (newPoints2[0] == null || newPoints2[0].nodeType != PathNodeType.DOOR_OPEN) && newPointDiagonal.nodeType != PathNodeType.DOOR_OPEN) {
 					boolean canPassPoleDiagonally = newPoints2[0] != null && newPoints2[0].nodeType == PathNodeType.FENCE && newPoints1[0] != null && newPoints1[0].nodeType == PathNodeType.FENCE && fitsThroughPoles;
 					return (allowObstructions || newPointDiagonal.costMalus >= 0.0F) &&
 							(canPassPoleDiagonally || (

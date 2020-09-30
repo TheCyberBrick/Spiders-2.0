@@ -14,6 +14,7 @@ import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.world.World;
 import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
 
@@ -142,12 +143,13 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		if(this.currentPath.getCurrentPathIndex() + 1 >= this.currentPath.getCurrentPathLength()) {
 			return false;
 		} else {
-			Vector3d currentTarget = Vector3d.func_237492_c_(this.currentPath.func_242948_g());
+			Vector3d currentTarget = Vector3d.func_237492_c_(this.currentPath.getTarget());
 
 			if(!pos.func_237488_a_(currentTarget, 2.0D)) {
 				return false;
 			} else {
-				Vector3d nextTarget = Vector3d.func_237492_c_(this.currentPath.func_242947_d(this.currentPath.getCurrentPathIndex() + 1));
+				PathPoint point = this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex() + 1);
+				Vector3d nextTarget = Vector3d.func_237492_c_(new Vector3i(point.x, point.y, point.z));
 				Vector3d targetDir = nextTarget.subtract(currentTarget);
 				Vector3d currentDir = pos.subtract(currentTarget);
 

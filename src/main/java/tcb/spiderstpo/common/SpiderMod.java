@@ -17,7 +17,6 @@ import net.minecraft.entity.monster.CaveSpiderEntity;
 import net.minecraft.entity.monster.SpiderEntity;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.world.IServerWorld;
 import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ServerWorld;
@@ -137,8 +136,8 @@ public class SpiderMod {
 			replacement.copyDataFromOld(entity);
 			replacement.setLocationAndAngles(entity.getPosX(), entity.getPosY(), entity.getPosZ(), entity.rotationYaw, entity.rotationPitch);
 
-			if(reason != null && replacement instanceof MobEntity && world instanceof IServerWorld) {
-				((MobEntity) replacement).onInitialSpawn((IServerWorld) world, world.getDifficultyForLocation(entity.func_233580_cy_()), reason, null, null);
+			if(reason != null && replacement instanceof MobEntity) {
+				((MobEntity) replacement).onInitialSpawn(world, world.getDifficultyForLocation(entity.func_233580_cy_()), reason, null, null);
 			}
 
 			replacement.forceSpawn = entity.forceSpawn;
