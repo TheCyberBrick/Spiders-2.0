@@ -2,25 +2,23 @@ package tcb.spiderstpo.common.entity.movement;
 
 import javax.annotation.Nullable;
 
-import com.google.common.collect.ImmutableSet;
-
-import net.minecraft.block.BlockState;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.pathfinding.PathPoint;
-import net.minecraft.pathfinding.PathType;
-import net.minecraft.util.Direction;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.ChunkCache;
 import net.minecraft.world.World;
 import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
 
 public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> extends AdvancedGroundPathNavigator<T> {
 	protected final AbstractClimberEntity climber;
 
-	protected Direction verticalFacing = Direction.DOWN;
+	protected EnumFacing verticalFacing = EnumFacing.DOWN;
 
 	protected boolean findDirectPathPoints = false;
 
@@ -44,59 +42,90 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 	}
 
 	@Override
-	protected Vector3d getEntityPosition() {
-		return this.entity.getPositionVec().add(0, this.entity.getHeight() / 2.0f, 0);
+	protected Vec3d getEntityPosition() {
+		return this.entity.getPositionVector().addVector(0, this.entity.height / 2.0f, 0);
 	}
 
 	@Override
 	@Nullable
-	public Path getPathToPos(BlockPos pos, int checkpointRange) {
-		return this.func_225464_a(ImmutableSet.of(pos), 8, false, checkpointRange);
+	public Path getPathToPos(BlockPos pos) {
+		if(!this.canNavigate()) {
+			return null;
+		} else if(this.currentPath != null && !this.currentPath.isFinished() && pos.equals(this.targetPos)) {
+			return this.currentPath;
+		} else {
+			this.targetPos = pos;
+			float searchRange = this.getPathSearchRange();
+			this.world.profiler.startSection("pathfind");
+			BlockPos cachePos = new BlockPos(this.entity);
+			int cacheSize = (int)(searchRange + 8.0F);
+			ChunkCache chunkCache = new ChunkCache(this.world, cachePos.add(-cacheSize, -cacheSize, -cacheSize), cachePos.add(cacheSize, cacheSize, cacheSize), 0);
+			Path path = this.pathFinder.findPath(chunkCache, this.entity, this.targetPos, searchRange);
+			this.world.profiler.endSection();
+			return path;
+		}
 	}
 
 	@Override
 	@Nullable
-	public Path getPathToEntity(Entity entityIn, int checkpointRange) {
-		return this.func_225464_a(ImmutableSet.of(entityIn.func_233580_cy_()), 16, true, checkpointRange);
-	}
+	public Path getPathToEntityLiving(Entity entityIn) {
+		if(!this.canNavigate()) {
+			return null;
+		} else {
+			BlockPos pos = new BlockPos(entityIn);
 
+			if(this.currentPath != null && !this.currentPath.isFinished() && pos.equals(this.targetPos)) {
+				return this.currentPath;
+			} else {
+				this.targetPos = pos;
+				float searchRange = this.getPathSearchRange();
+				this.world.profiler.startSection("pathfind");
+				BlockPos cachePos = pos.up();
+				int cacheSize = (int)(searchRange + 16.0F);
+				ChunkCache chunkCache = new ChunkCache(this.world, cachePos.add(-cacheSize, -cacheSize, -cacheSize), cachePos.add(cacheSize, cacheSize, cacheSize), 0);
+				Path path = this.pathFinder.findPath(chunkCache, this.entity, entityIn, searchRange);
+				this.world.profiler.endSection();
+				return path;
+			}
+		}
+	}
 	@Override
 	protected void pathFollow() {
-		Vector3d pos = this.getEntityPosition();
+		Vec3d pos = this.getEntityPosition();
 
-		this.maxDistanceToWaypoint = this.entity.getWidth() > 0.75F ? this.entity.getWidth() / 2.0F : 0.75F - this.entity.getWidth() / 2.0F;
-		float maxDistanceToWaypointY = Math.max(1 /*required for e.g. slabs*/, this.entity.getHeight() > 0.75F ? this.entity.getHeight() / 2.0F : 0.75F - this.entity.getHeight() / 2.0F);
-		PathPoint currentTarget = this.currentPath.func_237225_h_(); //getCurrentPos
+		this.maxDistanceToWaypoint = this.entity.width > 0.75F ? this.entity.width / 2.0F : 0.75F - this.entity.width / 2.0F;
+		float maxDistanceToWaypointY = Math.max(1 /*required for e.g. slabs*/, this.entity.height > 0.75F ? this.entity.height / 2.0F : 0.75F - this.entity.height / 2.0F);
+		Vec3d currentTarget = this.currentPath.getCurrentPos();
 
-		/*float offsetX = MathHelper.ceil(this.entity.getWidth()) - this.entity.getWidth();
-		float offsetY = MathHelper.ceil(this.entity.getHeight()) - this.entity.getHeight();
+		/*float offsetX = MathHelper.ceil(this.entity.width) - this.entity.width;
+		float offsetY = MathHelper.ceil(this.entity.height) - this.entity.height;
 		float offsetZ = offsetX;
 
 		double dx = Math.abs(currentTarget.x - (this.entity.getBoundingBox().minX + offsetX));
 		double dy = Math.abs(currentTarget.y - (this.entity.getBoundingBox().minY + offsetY));
 		double dz = Math.abs(currentTarget.z - (this.entity.getBoundingBox().minZ + offsetZ));*/
 
-		double dx = Math.abs(currentTarget.x + (int)(this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosX());
-		double dy = Math.abs(currentTarget.y - this.entity.getPosY());
-		double dz = Math.abs(currentTarget.z + (int)(this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosZ());
+		double dx = Math.abs(currentTarget.x + (int)(this.entity.width + 1.0f) * 0.5f - this.entity.posX);
+		double dy = Math.abs(currentTarget.y - this.entity.posY);
+		double dz = Math.abs(currentTarget.z + (int)(this.entity.width + 1.0f) * 0.5f - this.entity.posZ);
 
 		boolean isWaypointInReach = dx < this.maxDistanceToWaypoint && dy < maxDistanceToWaypointY && dz < this.maxDistanceToWaypoint;
 
-		int sizeX = MathHelper.ceil(this.entity.getWidth());
-		int sizeY = MathHelper.ceil(this.entity.getHeight());
+		int sizeX = MathHelper.ceil(this.entity.width);
+		int sizeY = MathHelper.ceil(this.entity.height);
 		int sizeZ = sizeX;
 
 		AbstractClimberEntity.Orientation orientation = this.climber.getOrientation(1);
-		Vector3d upVector = orientation.getDirection(this.climber.rotationYaw, -90);
+		Vec3d upVector = orientation.getDirection(this.climber.rotationYaw, -90);
 
-		this.verticalFacing = Direction.getFacingFromVector((float)upVector.x, (float)upVector.y, (float)upVector.z);
+		this.verticalFacing = EnumFacing.getFacingFromVector((float)upVector.x, (float)upVector.y, (float)upVector.z);
 
-		if(isWaypointInReach || (this.entity.func_233660_b_(this.currentPath.func_237225_h_().nodeType) && this.isNextTargetInLine(pos, sizeX, sizeY, sizeZ))) {
+		if(isWaypointInReach || this.isNextTargetInLine(pos, sizeX, sizeY, sizeZ)) {
 			this.currentPath.setCurrentPathIndex(this.currentPath.getCurrentPathIndex() + 1);
 		}
 
 		if(this.findDirectPathPoints) {
-			Direction.Axis verticalAxis = this.verticalFacing.getAxis();
+			EnumFacing.Axis verticalAxis = this.verticalFacing.getAxis();
 
 			int firstDifferentHeightPoint = this.currentPath.getCurrentPathLength();
 
@@ -138,42 +167,43 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		this.checkForStuck(pos);
 	}
 
-	private boolean isNextTargetInLine(Vector3d pos, int sizeX, int sizeY, int sizeZ) {
+	private boolean isNextTargetInLine(Vec3d pos, int sizeX, int sizeY, int sizeZ) {
 		if(this.currentPath.getCurrentPathIndex() + 1 >= this.currentPath.getCurrentPathLength()) {
 			return false;
 		} else {
-			Vector3d currentTarget = Vector3d.func_237492_c_(this.currentPath.func_242948_g());
+			Vec3d currentTarget = this.currentPath.getCurrentPos().addVector(0.5D, 0.5D, 0.5D);
 
-			if(!pos.func_237488_a_(currentTarget, 2.0D)) {
+			if(pos.distanceTo(currentTarget) > 2.0D) {
 				return false;
 			} else {
-				Vector3d nextTarget = Vector3d.func_237492_c_(this.currentPath.func_242947_d(this.currentPath.getCurrentPathIndex() + 1));
-				Vector3d targetDir = nextTarget.subtract(currentTarget);
-				Vector3d currentDir = pos.subtract(currentTarget);
+				PathPoint nextPoint = this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex() + 1);
+				Vec3d nextTarget = new Vec3d(nextPoint.x + 0.5D, nextPoint.y + 0.5D, nextPoint.z + 0.5D);
+				Vec3d targetDir = nextTarget.subtract(currentTarget);
+				Vec3d currentDir = pos.subtract(currentTarget);
 
 				if(targetDir.dotProduct(currentDir) > 0.0D) {
-					Direction.Axis ax, ay, az;
+					EnumFacing.Axis ax, ay, az;
 					boolean invertY;
 
 					switch(this.verticalFacing.getAxis()) {
 					case X:
-						ax = Direction.Axis.Z; 
-						ay = Direction.Axis.X;
-						az = Direction.Axis.Y;
-						invertY = this.verticalFacing.getXOffset() < 0;
+						ax = EnumFacing.Axis.Z; 
+						ay = EnumFacing.Axis.X;
+						az = EnumFacing.Axis.Y;
+						invertY = this.verticalFacing.getFrontOffsetX() < 0;
 						break;
 					default:
 					case Y:
-						ax = Direction.Axis.X;
-						ay = Direction.Axis.Y;
-						az = Direction.Axis.Z;
-						invertY = this.verticalFacing.getYOffset() < 0;
+						ax = EnumFacing.Axis.X;
+						ay = EnumFacing.Axis.Y;
+						az = EnumFacing.Axis.Z;
+						invertY = this.verticalFacing.getFrontOffsetY() < 0;
 						break;
 					case Z:
-						ax = Direction.Axis.Y;
-						ay = Direction.Axis.Z;
-						az = Direction.Axis.X;
-						invertY = this.verticalFacing.getZOffset() < 0;
+						ax = EnumFacing.Axis.Y;
+						ay = EnumFacing.Axis.Z;
+						az = EnumFacing.Axis.X;
+						invertY = this.verticalFacing.getFrontOffsetZ() < 0;
 						break;
 					}
 
@@ -187,19 +217,19 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 	}
 
 	@Override
-	protected boolean isDirectPathBetweenPoints(Vector3d start, Vector3d end, int sizeX, int sizeY, int sizeZ) {
+	protected boolean isDirectPathBetweenPoints(Vec3d start, Vec3d end, int sizeX, int sizeY, int sizeZ) {
 		switch(this.verticalFacing.getAxis()) {
 		case X:
-			return this.isDirectPathBetweenPoints(start, end, sizeX, sizeY, sizeZ, Direction.Axis.Z, Direction.Axis.X, Direction.Axis.Y, 0.0D, this.verticalFacing.getXOffset() < 0);
+			return this.isDirectPathBetweenPoints(start, end, sizeX, sizeY, sizeZ, EnumFacing.Axis.Z, EnumFacing.Axis.X, EnumFacing.Axis.Y, 0.0D, this.verticalFacing.getFrontOffsetX() < 0);
 		case Y:
-			return this.isDirectPathBetweenPoints(start, end, sizeX, sizeY, sizeZ, Direction.Axis.X, Direction.Axis.Y, Direction.Axis.Z, 0.0D, this.verticalFacing.getYOffset() < 0);
+			return this.isDirectPathBetweenPoints(start, end, sizeX, sizeY, sizeZ, EnumFacing.Axis.X, EnumFacing.Axis.Y, EnumFacing.Axis.Z, 0.0D, this.verticalFacing.getFrontOffsetY() < 0);
 		case Z:
-			return this.isDirectPathBetweenPoints(start, end, sizeX, sizeY, sizeZ, Direction.Axis.Y, Direction.Axis.Z, Direction.Axis.X, 0.0D, this.verticalFacing.getZOffset() < 0);
+			return this.isDirectPathBetweenPoints(start, end, sizeX, sizeY, sizeZ, EnumFacing.Axis.Y, EnumFacing.Axis.Z, EnumFacing.Axis.X, 0.0D, this.verticalFacing.getFrontOffsetZ() < 0);
 		}
 		return false;
 	}
 
-	protected static double swizzle(Vector3d vec, Direction.Axis axis) {
+	protected static double swizzle(Vec3d vec, EnumFacing.Axis axis) {
 		switch(axis) {
 		case X:
 			return vec.x;
@@ -211,7 +241,7 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		return 0;
 	}
 
-	protected static int swizzle(int x, int y, int z, Direction.Axis axis) {
+	protected static int swizzle(int x, int y, int z, EnumFacing.Axis axis) {
 		switch(axis) {
 		case X:
 			return x;
@@ -223,19 +253,19 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		return 0;
 	}
 
-	protected static int unswizzle(int x, int y, int z, Direction.Axis ax, Direction.Axis ay, Direction.Axis az, Direction.Axis axis) {
-		Direction.Axis unswizzle;
+	protected static int unswizzle(int x, int y, int z, EnumFacing.Axis ax, EnumFacing.Axis ay, EnumFacing.Axis az, EnumFacing.Axis axis) {
+		EnumFacing.Axis unswizzle;
 		if(axis == ax) {
-			unswizzle = Direction.Axis.X;
+			unswizzle = EnumFacing.Axis.X;
 		} else if(axis == ay) {
-			unswizzle = Direction.Axis.Y;
+			unswizzle = EnumFacing.Axis.Y;
 		} else {
-			unswizzle = Direction.Axis.Z;
+			unswizzle = EnumFacing.Axis.Z;
 		}
 		return swizzle(x, y, z, unswizzle);
 	}
 
-	protected boolean isDirectPathBetweenPoints(Vector3d start, Vector3d end, int sizeX, int sizeY, int sizeZ, Direction.Axis ax, Direction.Axis ay, Direction.Axis az, double minDotProduct, boolean invertY) {
+	protected boolean isDirectPathBetweenPoints(Vec3d start, Vec3d end, int sizeX, int sizeY, int sizeZ, EnumFacing.Axis ax, EnumFacing.Axis ay, EnumFacing.Axis az, double minDotProduct, boolean invertY) {
 		int bx = MathHelper.floor(swizzle(start, ax));
 		int bz = MathHelper.floor(swizzle(start, az));
 		double dx = swizzle(end, ax) - swizzle(start, ax);
@@ -258,8 +288,8 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 			sizeZ2 = sizeZ2 + 2;
 
 			if(!this.isSafeToStandAt(
-					unswizzle(bx, by, bz, ax, ay, az, Direction.Axis.X), unswizzle(bx, by, bz, ax, ay, az, Direction.Axis.Y), unswizzle(bx, by, bz, ax, ay, az, Direction.Axis.Z),
-					unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, Direction.Axis.X), unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, Direction.Axis.Y), unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, Direction.Axis.Z),
+					unswizzle(bx, by, bz, ax, ay, az, EnumFacing.Axis.X), unswizzle(bx, by, bz, ax, ay, az, EnumFacing.Axis.Y), unswizzle(bx, by, bz, ax, ay, az, EnumFacing.Axis.Z),
+					unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, EnumFacing.Axis.X), unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, EnumFacing.Axis.Y), unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, EnumFacing.Axis.Z),
 					start, dx, dz, minDotProduct, ax, ay, az, invertY)) {
 				return false;
 			} else {
@@ -299,8 +329,8 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 					}
 
 					if(!this.isSafeToStandAt(
-							unswizzle(bx, by, bz, ax, ay, az, Direction.Axis.X), unswizzle(bx, by, bz, ax, ay, az, Direction.Axis.Y), unswizzle(bx, by, bz, ax, ay, az, Direction.Axis.Z),
-							unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, Direction.Axis.X), unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, Direction.Axis.Y), unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, Direction.Axis.Z),
+							unswizzle(bx, by, bz, ax, ay, az, EnumFacing.Axis.X), unswizzle(bx, by, bz, ax, ay, az, EnumFacing.Axis.Y), unswizzle(bx, by, bz, ax, ay, az, EnumFacing.Axis.Z),
+							unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, EnumFacing.Axis.X), unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, EnumFacing.Axis.Y), unswizzle(sizeX2, sizeY2, sizeZ2, ax, ay, az, EnumFacing.Axis.Z),
 							start, dx, dz, minDotProduct, ax, ay, az, invertY)) {
 						return false;
 					}
@@ -311,7 +341,7 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		}
 	}
 
-	protected boolean isSafeToStandAt(int x, int y, int z, int sizeX, int sizeY, int sizeZ, Vector3d start, double dx, double dz, double minDotProduct, Direction.Axis ax, Direction.Axis ay, Direction.Axis az, boolean invertY) {
+	protected boolean isSafeToStandAt(int x, int y, int z, int sizeX, int sizeY, int sizeZ, Vec3d start, double dx, double dz, double minDotProduct, EnumFacing.Axis ax, EnumFacing.Axis ay, EnumFacing.Axis az, boolean invertY) {
 		int sizeX2 = swizzle(sizeX, sizeY, sizeZ, ax);
 		int sizeZ2 = swizzle(sizeX, sizeY, sizeZ, az);
 
@@ -321,7 +351,7 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		int by = swizzle(x, y, z, ay);
 
 		if(!this.isPositionClear(
-				unswizzle(bx, y, bz, ax, ay, az, Direction.Axis.X), unswizzle(bx, y, bz, ax, ay, az, Direction.Axis.Y), unswizzle(bx, y, bz, ax, ay, az, Direction.Axis.Z),
+				unswizzle(bx, y, bz, ax, ay, az, EnumFacing.Axis.X), unswizzle(bx, y, bz, ax, ay, az, EnumFacing.Axis.Y), unswizzle(bx, y, bz, ax, ay, az, EnumFacing.Axis.Z),
 				sizeX, sizeY, sizeZ, start, dx, dz, minDotProduct, ax, ay, az)) {
 			return false;
 		} else {
@@ -333,7 +363,7 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 					if(offsetX * dx + offsetZ * dz >= minDotProduct) {
 						PathNodeType nodeTypeBelow = this.nodeProcessor.getPathNodeType(
 								this.world,
-								unswizzle(obx, by + (invertY ? 1 : -1), obz, ax, ay, az, Direction.Axis.X), unswizzle(obx, by + (invertY ? 1 : -1), obz, ax, ay, az, Direction.Axis.Y), unswizzle(obx, by + (invertY ? 1 : -1), obz, ax, ay, az, Direction.Axis.Z),
+								unswizzle(obx, by + (invertY ? 1 : -1), obz, ax, ay, az, EnumFacing.Axis.X), unswizzle(obx, by + (invertY ? 1 : -1), obz, ax, ay, az, EnumFacing.Axis.Y), unswizzle(obx, by + (invertY ? 1 : -1), obz, ax, ay, az, EnumFacing.Axis.Z),
 								this.entity, sizeX, sizeY, sizeZ, true, true);
 
 						if(nodeTypeBelow == PathNodeType.WATER) {
@@ -350,7 +380,7 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 
 						PathNodeType nodeType = this.nodeProcessor.getPathNodeType(
 								this.world,
-								unswizzle(obx, by, obz, ax, ay, az, Direction.Axis.X), unswizzle(obx, by, obz, ax, ay, az, Direction.Axis.Y), unswizzle(obx, by, obz, ax, ay, az, Direction.Axis.Z),
+								unswizzle(obx, by, obz, ax, ay, az, EnumFacing.Axis.X), unswizzle(obx, by, obz, ax, ay, az, EnumFacing.Axis.Y), unswizzle(obx, by, obz, ax, ay, az, EnumFacing.Axis.Z),
 								this.entity, sizeX, sizeY, sizeZ, true, true);
 						float f = this.entity.getPathPriority(nodeType);
 
@@ -369,15 +399,15 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		}
 	}
 
-	protected boolean isPositionClear(int x, int y, int z, int sizeX, int sizeY, int sizeZ, Vector3d start, double dx, double dz, double minDotProduct, Direction.Axis ax, Direction.Axis ay, Direction.Axis az) {
+	protected boolean isPositionClear(int x, int y, int z, int sizeX, int sizeY, int sizeZ, Vec3d start, double dx, double dz, double minDotProduct, EnumFacing.Axis ax, EnumFacing.Axis ay, EnumFacing.Axis az) {
 		for(BlockPos pos : BlockPos.getAllInBoxMutable(new BlockPos(x, y, z), new BlockPos(x + sizeX - 1, y + sizeY - 1, z + sizeZ - 1))) {
 			double offsetX = swizzle(pos.getX(), pos.getY(), pos.getZ(), ax) + 0.5D - swizzle(start, ax);
 			double pffsetZ = swizzle(pos.getX(), pos.getY(), pos.getZ(), az) + 0.5D - swizzle(start, az);
 
 			if(offsetX * dx + pffsetZ * dz >= minDotProduct) {
-				BlockState state = this.world.getBlockState(pos);
+				IBlockState state = this.world.getBlockState(pos);
 
-				if(!state.allowsMovement(this.world, pos, PathType.LAND)) {
+				if(!state.getBlock().isPassable(this.world, pos)) {
 					return false;
 				}
 			}

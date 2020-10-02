@@ -1,14 +1,12 @@
 package tcb.spiderstpo.client;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.entity.EntityRendererManager;
-import tcb.spiderstpo.common.SpiderMod;
+import net.minecraftforge.fml.client.registry.RenderingRegistry;
+import tcb.spiderstpo.common.entity.mob.BetterCaveSpiderEntity;
+import tcb.spiderstpo.common.entity.mob.BetterSpiderEntity;
 
 public class EntityRenderers {
 	public static void register() {
-		EntityRendererManager renderManager = Minecraft.getInstance().getRenderManager();
-
-		renderManager.register(SpiderMod.BETTER_SPIDER.get(), new BetterSpiderRenderer(renderManager));
-		renderManager.register(SpiderMod.BETTER_CAVE_SPIDER.get(), new BetterCaveSpiderRenderer(renderManager));
+		RenderingRegistry.registerEntityRenderingHandler(BetterSpiderEntity.class, BetterSpiderRenderer::new);
+		RenderingRegistry.registerEntityRenderingHandler(BetterCaveSpiderEntity.class, BetterCaveSpiderRenderer::new);
 	}
 }

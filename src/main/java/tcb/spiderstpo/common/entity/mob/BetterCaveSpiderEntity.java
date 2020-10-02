@@ -3,60 +3,64 @@ package tcb.spiderstpo.common.entity.mob;
 import javax.annotation.Nullable;
 
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntitySize;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ILivingEntityData;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.Pose;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.IEntityLivingData;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.init.MobEffects;
+import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.Difficulty;
+import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.IServerWorld;
+import net.minecraft.world.EnumDifficulty;
 import net.minecraft.world.World;
-import tcb.spiderstpo.common.SpiderMod;
+import net.minecraft.world.storage.loot.LootTableList;
 
 public class BetterCaveSpiderEntity extends BetterSpiderEntity {
-	public BetterCaveSpiderEntity(EntityType<? extends AbstractClimberEntity> type, World world) {
-		super(type, world);
-	}
-
 	public BetterCaveSpiderEntity(World world) {
-		super(SpiderMod.BETTER_CAVE_SPIDER.get(), world);
+		super(world);
+		this.setSize(0.7f, 0.5f);
 	}
 
-	public static AttributeModifierMap.MutableAttribute getAttributeMap() {
-		return BetterSpiderEntity.getAttributeMap().func_233815_a_(Attributes.field_233818_a_, 12.0D);
+	@Override
+	public String getName() {
+		if(this.hasCustomName()) {
+            return this.getCustomNameTag();
+        } else {
+            return I18n.translateToLocal("entity.CaveSpider.name");
+        }
+	}
+	
+	@Override
+	protected void applyEntityAttributes() {
+		super.applyEntityAttributes();
+		this.getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(12.0D);
 	}
 
 	@Override
 	public float getVerticalOffset(float partialTicks) {
 		return 0.225f;
 	}
-	
+
 	@Override
+	@Nullable
 	protected ResourceLocation getLootTable() {
-		return EntityType.CAVE_SPIDER.getLootTable();
+		return LootTableList.ENTITIES_CAVE_SPIDER;
 	}
 
 	@Override
 	public boolean attackEntityAsMob(Entity entityIn) {
 		if(super.attackEntityAsMob(entityIn)) {
-			if(entityIn instanceof LivingEntity) {
-				int i = 0;
-				if(this.world.getDifficulty() == Difficulty.NORMAL) {
-					i = 7;
-				} else if (this.world.getDifficulty() == Difficulty.HARD) {
-					i = 15;
+			if(entityIn instanceof EntityLivingBase) {
+				int poisonStrength = 0;
+
+				if(this.world.getDifficulty() == EnumDifficulty.NORMAL) {
+					poisonStrength = 7;
+				} else if (this.world.getDifficulty() == EnumDifficulty.HARD) {
+					poisonStrength = 15;
 				}
 
-				if(i > 0) {
-					((LivingEntity)entityIn).addPotionEffect(new EffectInstance(Effects.POISON, i * 20, 0));
+				if(poisonStrength > 0) {
+					((EntityLivingBase)entityIn).addPotionEffect(new PotionEffect(MobEffects.POISON, poisonStrength * 20, 0));
 				}
 			}
 
@@ -68,12 +72,12 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 
 	@Override
 	@Nullable
-	public ILivingEntityData onInitialSpawn(IServerWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
-		return spawnDataIn;
+	public IEntityLivingData onInitialSpawn(DifficultyInstance difficulty, @Nullable IEntityLivingData data) {
+		return data;
 	}
 
 	@Override
-	protected float getStandingEyeHeight(Pose poseIn, EntitySize sizeIn) {
+	public float getEyeHeight() {
 		return 0.45F;
 	}
 }

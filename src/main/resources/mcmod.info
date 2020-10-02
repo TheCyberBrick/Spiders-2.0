@@ -1,0 +1,16 @@
+[
+{
+  "modid": "spiderstpo",
+  "name": "Spiders 2.0",
+  "description": "Vanilla spiders are not yet creepy enough for you? You wish spiders would §oactually climb properly§r?! Spiders 2.0 enables spiders to walk along walls and ceilings and it also improves their AI such that they can find their way around almost any obstacle!",
+  "version": "${version}",
+  "mcversion": "1.12.2",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["TheCyberBrick"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]

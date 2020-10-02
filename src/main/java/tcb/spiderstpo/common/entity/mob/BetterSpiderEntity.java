@@ -1,107 +1,106 @@
 package tcb.spiderstpo.common.entity.mob;
 
-import java.util.function.Predicate;
-
 import javax.annotation.Nullable;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.entity.CreatureAttribute;
-import net.minecraft.entity.EntitySize;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ILivingEntityData;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.Pose;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.goal.HurtByTargetGoal;
-import net.minecraft.entity.ai.goal.LeapAtTargetGoal;
-import net.minecraft.entity.ai.goal.LookAtGoal;
-import net.minecraft.entity.ai.goal.LookRandomlyGoal;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
+import net.minecraft.block.Block;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
+import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.EnumCreatureAttribute;
+import net.minecraft.entity.IEntityLivingData;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.EntityAIAttackMelee;
+import net.minecraft.entity.ai.EntityAIHurtByTarget;
+import net.minecraft.entity.ai.EntityAILeapAtTarget;
+import net.minecraft.entity.ai.EntityAILookIdle;
+import net.minecraft.entity.ai.EntityAINearestAttackableTarget;
+import net.minecraft.entity.ai.EntityAISwimming;
+import net.minecraft.entity.ai.EntityAIWanderAvoidWater;
+import net.minecraft.entity.ai.EntityAIWatchClosest;
+import net.minecraft.entity.monster.EntityIronGolem;
+import net.minecraft.entity.monster.EntitySkeleton;
+import net.minecraft.entity.monster.EntitySpider;
 import net.minecraft.entity.monster.IMob;
-import net.minecraft.entity.monster.MonsterEntity;
-import net.minecraft.entity.monster.SkeletonEntity;
-import net.minecraft.entity.monster.SpiderEntity;
-import net.minecraft.entity.passive.IronGolemEntity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.init.MobEffects;
+import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.ShootableItem;
-import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.potion.Effect;
-import net.minecraft.potion.EffectInstance;
-import net.minecraft.potion.Effects;
+import net.minecraft.potion.Potion;
+import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
-import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.Difficulty;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.IServerWorld;
+import net.minecraft.world.EnumDifficulty;
+import net.minecraft.world.EnumSkyBlock;
 import net.minecraft.world.World;
-import tcb.spiderstpo.common.SpiderMod;
+import net.minecraft.world.storage.loot.LootTableList;
 
 public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
-	public BetterSpiderEntity(EntityType<? extends AbstractClimberEntity> type, World world) {
-		super(type, world);
-	}
-
 	public BetterSpiderEntity(World world) {
-		super(SpiderMod.BETTER_SPIDER.get(), world);
+		super(world);
+		this.setSize(0.95f, 0.85f);
 	}
 
 	@Override
-	protected void registerGoals() {
-		this.goalSelector.addGoal(1, new SwimGoal(this));
-		this.goalSelector.addGoal(3, new LeapAtTargetGoal(this, 0.4F));
-		this.goalSelector.addGoal(4, new BetterSpiderEntity.AttackGoal(this));
-		this.goalSelector.addGoal(5, new WaterAvoidingRandomWalkingGoal(this, 0.8D));
-		this.goalSelector.addGoal(6, new LookAtGoal(this, PlayerEntity.class, 8.0F));
-		this.goalSelector.addGoal(6, new LookRandomlyGoal(this));
-		this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
-		this.targetSelector.addGoal(2, new BetterSpiderEntity.TargetGoal<>(this, PlayerEntity.class));
-		this.targetSelector.addGoal(3, new BetterSpiderEntity.TargetGoal<>(this, IronGolemEntity.class));
+	protected void initEntityAI() {
+		this.tasks.addTask(1, new EntityAISwimming(this));
+		this.tasks.addTask(3, new EntityAILeapAtTarget(this, 0.4F));
+		this.tasks.addTask(4, new AISpiderAttack(this));
+		this.tasks.addTask(5, new EntityAIWanderAvoidWater(this, 0.8D));
+		this.tasks.addTask(6, new EntityAIWatchClosest(this, EntityPlayer.class, 8.0F));
+		this.tasks.addTask(6, new EntityAILookIdle(this));
+		this.targetTasks.addTask(1, new EntityAIHurtByTarget(this, false, new Class[0]));
+		this.targetTasks.addTask(2, new AISpiderTarget<>(this, EntityPlayer.class));
+		this.targetTasks.addTask(3, new AISpiderTarget<>(this, EntityIronGolem.class));
 	}
-
-	public static AttributeModifierMap.MutableAttribute getAttributeMap() {
-		return MonsterEntity.func_234295_eP_().func_233815_a_(Attributes.field_233818_a_, 24.0D).func_233815_a_(Attributes.field_233821_d_, (double)0.3F);
+	
+	@Override
+	public String getName() {
+		if(this.hasCustomName()) {
+            return this.getCustomNameTag();
+        } else {
+            return I18n.translateToLocal("entity.Spider.name");
+        }
 	}
 
 	@Override
-	protected ResourceLocation getLootTable() {
-		return EntityType.SPIDER.getLootTable();
+	protected void applyEntityAttributes() {
+		super.applyEntityAttributes();
+		this.getAttributeMap().registerAttribute(SharedMonsterAttributes.ATTACK_DAMAGE);
+		this.getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(16.0D);
+		this.getEntityAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue(0.3D);
 	}
-
+	
 	@Override
 	public SoundCategory getSoundCategory() {
 		return SoundCategory.HOSTILE;
 	}
 
 	@Override
-	public void livingTick() {
+	public void onLivingUpdate() {
 		this.updateArmSwingProgress();
-		this.updateIdletime();
-		super.livingTick();
-	}
-
-	protected void updateIdletime() {
 		float f = this.getBrightness();
+
 		if(f > 0.5F) {
 			this.idleTime += 2;
 		}
+
+		super.onLivingUpdate();
 	}
 
 	@Override
-	protected boolean isDespawnPeaceful() {
-		return true;
+	public void onUpdate() {
+		super.onUpdate();
+
+		if(!this.world.isRemote && this.world.getDifficulty() == EnumDifficulty.PEACEFUL) {
+			this.setDead();
+		}
 	}
 
 	@Override
@@ -116,7 +115,82 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	@Override
 	public boolean attackEntityFrom(DamageSource source, float amount) {
-		return this.isInvulnerableTo(source) ? false : super.attackEntityFrom(source, amount);
+		return this.isEntityInvulnerable(source) ? false : super.attackEntityFrom(source, amount);
+	}
+
+	@Override
+	public boolean attackEntityAsMob(Entity entityIn) {
+		float attackDamage = (float)this.getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue();
+		int kbModifier = 0;
+
+		if(entityIn instanceof EntityLivingBase) {
+			attackDamage += EnchantmentHelper.getModifierForCreature(this.getHeldItemMainhand(), ((EntityLivingBase)entityIn).getCreatureAttribute());
+			kbModifier += EnchantmentHelper.getKnockbackModifier(this);
+		}
+
+		boolean success = entityIn.attackEntityFrom(DamageSource.causeMobDamage(this), attackDamage);
+
+		if(success) {
+			if(kbModifier > 0 && entityIn instanceof EntityLivingBase) {
+				((EntityLivingBase)entityIn).knockBack(this, (float)kbModifier * 0.5F, (double)MathHelper.sin(this.rotationYaw * 0.017453292F), (double)(-MathHelper.cos(this.rotationYaw * 0.017453292F)));
+				this.motionX *= 0.6D;
+				this.motionZ *= 0.6D;
+			}
+
+			int fireAspect = EnchantmentHelper.getFireAspectModifier(this);
+
+			if(fireAspect > 0) {
+				entityIn.setFire(fireAspect * 4);
+			}
+
+			if(entityIn instanceof EntityPlayer) {
+				EntityPlayer player = (EntityPlayer)entityIn;
+				ItemStack heldItem = this.getHeldItemMainhand();
+				ItemStack usingItem = player.isHandActive() ? player.getActiveItemStack() : ItemStack.EMPTY;
+
+				if(!heldItem.isEmpty() && !usingItem.isEmpty() && heldItem.getItem().canDisableShield(heldItem, usingItem, player, this) && usingItem.getItem().isShield(usingItem, player)) {
+					float disableChance = 0.25F + (float)EnchantmentHelper.getEfficiencyModifier(this) * 0.05F;
+
+					if(this.rand.nextFloat() < disableChance) {
+						player.getCooldownTracker().setCooldown(usingItem.getItem(), 100);
+						this.world.setEntityState(player, (byte)30);
+					}
+				}
+			}
+
+			this.applyEnchantments(this, entityIn);
+		}
+
+		return success;
+	}
+
+	@Override
+	public float getBlockPathWeight(BlockPos pos) {
+		return 0.5F - this.world.getLightBrightness(pos);
+	}
+
+	@Override
+	public boolean getCanSpawnHere() {
+		return this.world.getDifficulty() != EnumDifficulty.PEACEFUL && this.isValidLightLevel() && super.getCanSpawnHere();
+	}
+
+	protected boolean isValidLightLevel() {
+		BlockPos blockpos = new BlockPos(this.posX, this.getEntityBoundingBox().minY, this.posZ);
+
+		if(this.world.getLightFor(EnumSkyBlock.SKY, blockpos) > this.rand.nextInt(32)) {
+			return false;
+		} else {
+			int lightLevel = this.world.getLightFromNeighbors(blockpos);
+
+			if(this.world.isThundering()) {
+				int skyLight = this.world.getSkylightSubtracted();
+				this.world.setSkylightSubtracted(10);
+				lightLevel = this.world.getLightFromNeighbors(blockpos);
+				this.world.setSkylightSubtracted(skyLight);
+			}
+
+			return lightLevel <= this.rand.nextInt(8);
+		}
 	}
 
 	@Override
@@ -130,24 +204,8 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	}
 
 	@Override
-	protected boolean func_230282_cS_() {
-		return true;
-	}
-
-	@Override
-	public ItemStack findAmmo(ItemStack shootable) {
-		if (shootable.getItem() instanceof ShootableItem) {
-			Predicate<ItemStack> predicate = ((ShootableItem)shootable.getItem()).getAmmoPredicate();
-			ItemStack itemstack = ShootableItem.getHeldAmmo(this, predicate);
-			return itemstack.isEmpty() ? new ItemStack(Items.ARROW) : itemstack;
-		} else {
-			return ItemStack.EMPTY;
-		}
-	}
-
-	@Override
 	public double getMountedYOffset() {
-		return (double)(this.getHeight() * 0.5F);
+		return (double)(this.height * 0.5F);
 	}
 
 	@Override
@@ -166,73 +224,70 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	}
 
 	@Override
-	protected void playStepSound(BlockPos pos, BlockState blockIn) {
+	protected void playStepSound(BlockPos pos, Block blockIn) {
 		this.playSound(SoundEvents.ENTITY_SPIDER_STEP, 0.15F, 1.0F);
 	}
 
 	@Override
-	public void setMotionMultiplier(BlockState state, Vector3d motionMultiplierIn) {
-		if(!state.isIn(Blocks.COBWEB)) {
-			super.setMotionMultiplier(state, motionMultiplierIn);
-		}
+	@Nullable
+	protected ResourceLocation getLootTable() {
+		return LootTableList.ENTITIES_SPIDER;
 	}
 
 	@Override
-	public CreatureAttribute getCreatureAttribute() {
-		return CreatureAttribute.ARTHROPOD;
+	public void setInWeb() {
 	}
 
 	@Override
-	public boolean isPotionApplicable(EffectInstance potioneffectIn) {
-		if(potioneffectIn.getPotion() == Effects.POISON) {
-			net.minecraftforge.event.entity.living.PotionEvent.PotionApplicableEvent event = new net.minecraftforge.event.entity.living.PotionEvent.PotionApplicableEvent(this, potioneffectIn);
-			net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event);
-			return event.getResult() == net.minecraftforge.eventbus.api.Event.Result.ALLOW;
-		}
-		return super.isPotionApplicable(potioneffectIn);
+	public EnumCreatureAttribute getCreatureAttribute() {
+		return EnumCreatureAttribute.ARTHROPOD;
+	}
+
+	@Override
+	public boolean isPotionApplicable(PotionEffect potioneffectIn) {
+		return potioneffectIn.getPotion() == MobEffects.POISON ? false : super.isPotionApplicable(potioneffectIn);
 	}
 
 	@Override
 	@Nullable
-	public ILivingEntityData onInitialSpawn(IServerWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
-		spawnDataIn = super.onInitialSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
-		if(worldIn.getRandom().nextInt(100) == 0) {
-			SkeletonEntity skeletonentity = EntityType.SKELETON.create(this.world);
-			skeletonentity.setLocationAndAngles(this.getPosX(), this.getPosY(), this.getPosZ(), this.rotationYaw, 0.0F);
-			skeletonentity.onInitialSpawn(worldIn, difficultyIn, reason, (ILivingEntityData)null, (CompoundNBT)null);
-			skeletonentity.startRiding(this);
+	public IEntityLivingData onInitialSpawn(DifficultyInstance difficulty, @Nullable IEntityLivingData data) {
+		data = super.onInitialSpawn(difficulty, data);
+
+		if(this.world.rand.nextInt(100) == 0) {
+			EntitySkeleton skeleton = new EntitySkeleton(this.world);
+			skeleton.setLocationAndAngles(this.posX, this.posY, this.posZ, this.rotationYaw, 0.0F);
+			skeleton.onInitialSpawn(difficulty, (IEntityLivingData)null);
+			this.world.spawnEntity(skeleton);
+			skeleton.startRiding(this);
 		}
 
-		if(spawnDataIn == null) {
-			spawnDataIn = new SpiderEntity.GroupData();
-			if(worldIn.getDifficulty() == Difficulty.HARD && worldIn.getRandom().nextFloat() < 0.1F * difficultyIn.getClampedAdditionalDifficulty()) {
-				((SpiderEntity.GroupData)spawnDataIn).setRandomEffect(worldIn.getRandom());
+		if(data == null) {
+			data = new EntitySpider.GroupData();
+
+			if(this.world.getDifficulty() == EnumDifficulty.HARD && this.world.rand.nextFloat() < 0.1F * difficulty.getClampedAdditionalDifficulty()) {
+				((EntitySpider.GroupData)data).setRandomEffect(this.world.rand);
 			}
 		}
 
-		if(spawnDataIn instanceof SpiderEntity.GroupData) {
-			Effect effect = ((SpiderEntity.GroupData)spawnDataIn).effect;
-			if(effect != null) {
-				this.addPotionEffect(new EffectInstance(effect, Integer.MAX_VALUE));
+		if(data instanceof EntitySpider.GroupData) {
+			Potion potion = ((EntitySpider.GroupData)data).effect;
+
+			if(potion != null) {
+				this.addPotionEffect(new PotionEffect(potion, Integer.MAX_VALUE));
 			}
 		}
 
-		return spawnDataIn;
+		return data;
 	}
 
 	@Override
-	protected float getStandingEyeHeight(Pose poseIn, EntitySize sizeIn) {
+	public float getEyeHeight() {
 		return 0.65F;
 	}
 
-	static class AttackGoal extends MeleeAttackGoal {
-		public AttackGoal(BetterSpiderEntity spider) {
+	static class AISpiderAttack extends EntityAIAttackMelee {
+		public AISpiderAttack(BetterSpiderEntity spider) {
 			super(spider, 1.0D, true);
-		}
-
-		@Override
-		public boolean shouldExecute() {
-			return super.shouldExecute() && !this.attacker.isBeingRidden();
 		}
 
 		@Override
@@ -248,9 +303,10 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 				return true;
 			}*/
 
-			float f = this.attacker.getBrightness();
-			if (f >= 0.5F && this.attacker.getRNG().nextInt(100) == 0) {
-				this.attacker.setAttackTarget((LivingEntity)null);
+			float brightness = this.attacker.getBrightness();
+
+			if(brightness >= 0.5F && this.attacker.getRNG().nextInt(100) == 0) {
+				this.attacker.setAttackTarget((EntityLivingBase)null);
 				return false;
 			} else {
 				return super.shouldContinueExecuting();
@@ -258,13 +314,13 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 		}
 
 		@Override
-		protected double getAttackReachSqr(LivingEntity attackTarget) {
-			return (double)(4.0F + attackTarget.getWidth());
+		protected double getAttackReachSqr(EntityLivingBase attackTarget) {
+			return (double)(4.0F + attackTarget.width);
 		}
 	}
 
-	static class TargetGoal<T extends LivingEntity> extends NearestAttackableTargetGoal<T> {
-		public TargetGoal(BetterSpiderEntity spider, Class<T> classTarget) {
+	static class AISpiderTarget<T extends EntityLivingBase> extends EntityAINearestAttackableTarget<T> {
+		public AISpiderTarget(BetterSpiderEntity spider, Class<T> classTarget) {
 			super(spider, classTarget, true);
 		}
 
@@ -278,8 +334,8 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 			}.setDistance(this.getTargetDistance()).setCustomPredicate(p -> true);
 			return super.shouldExecute();*/
 
-			float f = this.goalOwner.getBrightness();
-			return f >= 0.5F ? false : super.shouldExecute();
+			float brightness = this.taskOwner.getBrightness();
+			return brightness >= 0.5F ? false : super.shouldExecute();
 		}
 	}
 }

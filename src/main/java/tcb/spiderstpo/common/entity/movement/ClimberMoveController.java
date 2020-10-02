@@ -1,12 +1,12 @@
 package tcb.spiderstpo.common.entity.movement;
 
-import net.minecraft.entity.ai.controller.MovementController;
-import net.minecraft.util.Direction;
+import net.minecraft.entity.ai.EntityMoveHelper;
+import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.Vec3d;
 import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
 
-public class ClimberMoveController extends MovementController {
+public class ClimberMoveController extends EntityMoveHelper {
 	protected int courseChangeCooldown;
 	protected boolean blocked = false;
 
@@ -18,45 +18,45 @@ public class ClimberMoveController extends MovementController {
 	}
 
 	@Override
-	public void tick() {
+	public void onUpdateMoveHelper() {
 		double speed = this.climber.getMovementSpeed() * this.speed;
 
-		if(this.action == MovementController.Action.MOVE_TO) {
-			this.action = MovementController.Action.WAIT;
+		if(this.action == EntityMoveHelper.Action.MOVE_TO) {
+			this.action = EntityMoveHelper.Action.WAIT;
 
 			AbstractClimberEntity.Orientation orientation = this.climber.getOrientation(1);
 
-			Vector3d up = orientation.getDirection(this.climber.rotationYaw, -90);
+			Vec3d up = orientation.getDirection(this.climber.rotationYaw, -90);
 
-			int entitySizeX = MathHelper.floor(this.mob.getWidth() + 1.0F);
-			int entitySizeY = MathHelper.floor(this.mob.getHeight() + 1.0F);
-			int entitySizeZ = MathHelper.floor(this.mob.getWidth() + 1.0F);
+			int entitySizeX = MathHelper.floor(this.entity.width + 1.0F);
+			int entitySizeY = MathHelper.floor(this.entity.height + 1.0F);
+			int entitySizeZ = MathHelper.floor(this.entity.width + 1.0F);
 
 			//TODO This is unreliable when moving from ground to wall
-			Direction side = this.climber.getWalkingSide().getLeft();
+			EnumFacing side = this.climber.getWalkingSide().getLeft();
 			
-			double dx = (this.posX + Math.max(0, side.getXOffset()) * (entitySizeX - 1) + side.getXOffset() * 0.5f) - this.mob.getPosX();
-			double dy = (this.posY + Math.max(0, side.getYOffset()) * (entitySizeY - 1) + side.getYOffset() * 0.5f) - this.mob.getPosY();
-			double dz = (this.posZ + Math.max(0, side.getZOffset()) * (entitySizeZ - 1) + side.getZOffset() * 0.5f) - this.mob.getPosZ();
+			double dx = (this.posX + Math.max(0, side.getFrontOffsetX()) * (entitySizeX - 1) + side.getFrontOffsetX() * 0.5f) - this.entity.posX;
+			double dy = (this.posY + Math.max(0, side.getFrontOffsetY()) * (entitySizeY - 1) + side.getFrontOffsetY() * 0.5f) - this.entity.posY;
+			double dz = (this.posZ + Math.max(0, side.getFrontOffsetZ()) * (entitySizeZ - 1) + side.getFrontOffsetZ() * 0.5f) - this.entity.posZ;
 
-			Vector3d offset = new Vector3d(dx, dy, dz);
+			Vec3d offset = new Vec3d(dx, dy, dz);
 
-			Vector3d targetDir = offset.subtract(up.scale(offset.dotProduct(up)));
-			double targetDist = targetDir.length();
+			Vec3d targetDir = offset.subtract(up.scale(offset.dotProduct(up)));
+			double targetDist = targetDir.lengthVector();
 			targetDir = targetDir.normalize();
 
 			if(targetDist < 0.0001D) {
-				this.mob.setMoveForward(0);
+				this.entity.setMoveForward(0);
 			} else {
 				float rx = (float)orientation.localZ.dotProduct(targetDir);
 				float ry = (float)orientation.localX.dotProduct(targetDir);
 
-				this.mob.rotationYaw = this.limitAngle(this.mob.rotationYaw, 270.0f - (float)Math.toDegrees(Math.atan2(rx, ry)), 90.0f);
+				this.entity.rotationYaw = this.limitAngle(this.entity.rotationYaw, 270.0f - (float)Math.toDegrees(Math.atan2(rx, ry)), 90.0f);
 
-				this.mob.setAIMoveSpeed((float)speed);
+				this.entity.setAIMoveSpeed((float)speed);
 			}
-		} else if(this.action == MovementController.Action.WAIT) {
-			this.mob.setMoveForward(0);
+		} else if(this.action == EntityMoveHelper.Action.WAIT) {
+			this.entity.setMoveForward(0);
 		}
 	}
 }

@@ -1,7 +1,7 @@
 package tcb.spiderstpo.common;
 
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.Vec3d;
 
 public class Matrix4f {
 	public float m00, m01, m02, m03;
@@ -107,11 +107,11 @@ public class Matrix4f {
 		this.m33 = m33;
 	}
 
-	public Vector3d multiply(Vector3d point) {
+	public Vec3d multiply(Vec3d point) {
 		return this.multiply(point, 0);
 	}
 
-	public Vector3d multiply(Vector3d point, float w) {
-		return new Vector3d(this.m00 * point.x + this.m01 * point.y + this.m02 * point.z + this.m03 * w, this.m10 * point.x + this.m11 * point.y + this.m12 * point.z + this.m13 * w, this.m20 * point.x + this.m21 * point.y + this.m22 * point.z + this.m23 * w);
+	public Vec3d multiply(Vec3d point, float w) {
+		return new Vec3d(this.m00 * point.x + this.m01 * point.y + this.m02 * point.z + this.m03 * w, this.m10 * point.x + this.m11 * point.y + this.m12 * point.z + this.m13 * w, this.m20 * point.x + this.m21 * point.y + this.m22 * point.z + this.m23 * w);
 	}
 }

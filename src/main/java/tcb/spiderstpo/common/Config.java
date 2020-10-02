@@ -1,24 +1,25 @@
 package tcb.spiderstpo.common;
 
-import net.minecraftforge.common.ForgeConfigSpec;
+import net.minecraftforge.common.config.Config.Comment;
+import net.minecraftforge.common.config.Config.Name;
+import net.minecraftforge.common.config.ConfigManager;
+import net.minecraftforge.fml.client.event.ConfigChangedEvent.OnConfigChangedEvent;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
+@net.minecraftforge.common.config.Config(modid = "spiderstpo", name = "spiders-2.0")
 public class Config {
-	public static final ForgeConfigSpec COMMON;
+	@Name("replace_natural_spawns")
+	@Comment("Whether natural spider spawns should be replaced. This includes e.g. mob spawners and spawn eggs.")
+	public static boolean replaceNaturalSpawns = true;
 
-	public static final ForgeConfigSpec.BooleanValue REPLACE_NATURAL_SPAWNS;
-	public static final ForgeConfigSpec.BooleanValue REPLACE_ANY_SPAWNS;
+	@Name("replace_any_spawns")
+	@Comment("Whether any spider spawns should be replaced. This also applies retroactively to already existing spiders.")
+	public static boolean replaceAnySpawns = true;
 
-	static {
-		ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
-
-		REPLACE_NATURAL_SPAWNS = builder
-				.comment("Whether natural spider spawns should be replaced. This includes e.g. mob spawners and spawn eggs, but not commands.")
-				.define("replace_natural_spawns", true);
-
-		REPLACE_ANY_SPAWNS = builder
-				.comment("Whether any spider spawns should be replaced. This also applies retroactively to already existing spiders.")
-				.define("replace_any_spawns", true);
-
-		COMMON = builder.build();
+	@SubscribeEvent
+	public static void onConfigChanged(OnConfigChangedEvent event) {
+		if("spiderstpo".equals(event.getModID())) {
+			ConfigManager.sync("spiderstpo", net.minecraftforge.common.config.Config.Type.INSTANCE);
+		}
 	}
 }
