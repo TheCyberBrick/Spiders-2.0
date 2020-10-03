@@ -587,7 +587,7 @@ public class AdvancedWalkNodeProcessor<T extends EntityLiving & IAdvancedPathFin
 					int fallDistance = 0;
 					int preFallY = y;
 
-					while(y > 0 && nodeType == PathNodeType.OPEN) {
+					while(this.entity.getMaxFallHeight() > 0 && y > 0 && nodeType == PathNodeType.OPEN) {
 						--y;
 
 						if(fallDistance++ >= this.entity.getMaxFallHeight() || y == 0) {

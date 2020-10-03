@@ -31,6 +31,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Rotations;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
 import tcb.spiderstpo.common.Matrix4f;
 import tcb.spiderstpo.common.SpiderMod;
@@ -85,7 +86,7 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 		super(world);
 		this.stepHeight = 0.1f;
 		this.moveHelper = new ClimberMoveController(this);
-		//this.lookHelper = new ClimberLookController(this); TODO Reflection
+		ObfuscationReflectionHelper.setPrivateValue(EntityLiving.class, this, new ClimberLookController(this), "field_70749_g"); //lookHelper
 	}
 
 	@Override
@@ -361,7 +362,7 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 
 		return new Orientation(orientationNormal, localZ, localY, localX, componentZ, componentY, componentX, yaw, pitch);
 	}
-	
+
 	@Override
 	public void onUpdate() {
 		super.onUpdate();
@@ -500,7 +501,7 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 	public void setPositionAndRotationDirect(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
 		super.setPositionAndRotationDirect(x, y, z, (float)this.interpTargetYaw, (float)this.interpTargetPitch, posRotationIncrements, teleport);
 	}
-	
+
 	@Override
 	public void setRotationYawHead(float rotation) {
 	}
@@ -625,7 +626,7 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 				this.motionX = motion.x;
 				this.motionY = motion.y;
 				this.motionZ = motion.z;
-				
+
 				//Movement vector projected to surface
 				Vec3d surfaceMovementDir = movementDir.subtract(collisionNormal.scale(collisionNormal.dotProduct(movementDir))).normalize();
 

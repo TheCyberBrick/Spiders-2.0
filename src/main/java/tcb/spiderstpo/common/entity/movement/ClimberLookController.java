@@ -24,16 +24,12 @@ public class ClimberLookController extends EntityLookHelper {
 	}
 
 	@Override
-	public void setLookPositionWithEntity(Entity entityIn, float deltaYaw, float deltaPitch)
-	{
+	public void setLookPositionWithEntity(Entity entityIn, float deltaYaw, float deltaPitch) {
 		this.posX = entityIn.posX;
 
-		if (entityIn instanceof EntityLivingBase)
-		{
+		if(entityIn instanceof EntityLivingBase) {
 			this.posY = entityIn.posY + (double)entityIn.getEyeHeight();
-		}
-		else
-		{
+		} else {
 			this.posY = (entityIn.getEntityBoundingBox().minY + entityIn.getEntityBoundingBox().maxY) / 2.0D;
 		}
 
@@ -44,8 +40,7 @@ public class ClimberLookController extends EntityLookHelper {
 	}
 
 	@Override
-	public void setLookPosition(double x, double y, double z, float deltaYaw, float deltaPitch)
-	{
+	public void setLookPosition(double x, double y, double z, float deltaYaw, float deltaPitch) {
 		this.posX = x;
 		this.posY = y;
 		this.posZ = z;
@@ -55,12 +50,10 @@ public class ClimberLookController extends EntityLookHelper {
 	}
 
 	@Override
-	public void onUpdateLook()
-	{
+	public void onUpdateLook() {
 		this.entity.rotationPitch = 0.0F;
 
-		if (this.isLooking)
-		{
+		if(this.isLooking) {
 			this.isLooking = false;
 
 			Vec3d dir = new Vec3d(this.posX - this.entity.posX, this.posY - this.entity.posY - this.entity.getEyeHeight(), this.posZ - this.entity.posZ);
@@ -68,66 +61,54 @@ public class ClimberLookController extends EntityLookHelper {
 
 			this.entity.rotationPitch = this.updateRotation(this.entity.rotationPitch, rotation.getRight(), this.deltaLookPitch);
 			this.entity.rotationYawHead = this.updateRotation(this.entity.rotationYawHead, rotation.getLeft(), this.deltaLookYaw);
-		}
-		else
-		{
+		} else {
 			this.entity.rotationYawHead = this.updateRotation(this.entity.rotationYawHead, this.entity.renderYawOffset, 10.0F);
 		}
 
-		float f2 = MathHelper.wrapDegrees(this.entity.rotationYawHead - this.entity.renderYawOffset);
+		float yawOffset = MathHelper.wrapDegrees(this.entity.rotationYawHead - this.entity.renderYawOffset);
 
-		if (!this.entity.getNavigator().noPath())
-		{
-			if (f2 < -75.0F)
-			{
+		if(!this.entity.getNavigator().noPath()) {
+			if(yawOffset < -75.0F) {
 				this.entity.rotationYawHead = this.entity.renderYawOffset - 75.0F;
 			}
 
-			if (f2 > 75.0F)
-			{
+			if(yawOffset > 75.0F) {
 				this.entity.rotationYawHead = this.entity.renderYawOffset + 75.0F;
 			}
 		}
 	}
 
-	private float updateRotation(float p_75652_1_, float p_75652_2_, float p_75652_3_)
-	{
-		float f = MathHelper.wrapDegrees(p_75652_2_ - p_75652_1_);
+	private float updateRotation(float rotation, float target, float maxIncrement) {
+		float increment = MathHelper.wrapDegrees(target - rotation);
 
-		if (f > p_75652_3_)
-		{
-			f = p_75652_3_;
+		if(increment > maxIncrement) {
+			increment = maxIncrement;
 		}
 
-		if (f < -p_75652_3_)
-		{
-			f = -p_75652_3_;
+		if(increment < -maxIncrement) {
+			increment = -maxIncrement;
 		}
 
-		return p_75652_1_ + f;
+		return rotation + increment;
 	}
 
 	@Override
-	public boolean getIsLooking()
-	{
+	public boolean getIsLooking() {
 		return this.isLooking;
 	}
 
 	@Override
-	public double getLookPosX()
-	{
+	public double getLookPosX() {
 		return this.posX;
 	}
 
 	@Override
-	public double getLookPosY()
-	{
+	public double getLookPosY() {
 		return this.posY;
 	}
 
 	@Override
-	public double getLookPosZ()
-	{
+	public double getLookPosZ() {
 		return this.posZ;
 	}
 }
