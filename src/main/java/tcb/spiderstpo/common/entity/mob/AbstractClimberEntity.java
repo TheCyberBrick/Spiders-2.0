@@ -1,7 +1,6 @@
 package tcb.spiderstpo.common.entity.mob;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -11,13 +10,12 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityCreature;
 import net.minecraft.entity.EntityLiving;
+import net.minecraft.entity.EntityTrackerEntry;
 import net.minecraft.entity.MoverType;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
-import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
@@ -31,6 +29,7 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Rotations;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
 import tcb.spiderstpo.common.Matrix4f;
@@ -86,7 +85,7 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 		super(world);
 		this.stepHeight = 0.1f;
 		this.moveHelper = new ClimberMoveController(this);
-		ObfuscationReflectionHelper.setPrivateValue(EntityLiving.class, this, new ClimberLookController(this), "field_70749_g"); //lookHelper
+		this.lookHelper = new ClimberLookController(this);
 	}
 
 	@Override
@@ -367,29 +366,34 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 	public void onUpdate() {
 		super.onUpdate();
 
-		if(!this.world.isRemote) {
-			Vec3d look = this.getOrientation(1).getDirection(this.rotationYaw, this.rotationPitch);
-			this.dataManager.set(ROTATION_BODY, new Rotations((float) look.x, (float) look.y, (float) look.z));
+		if(!this.world.isRemote && this.world instanceof WorldServer) {
+			EntityTrackerEntry tracker = ((WorldServer) this.world).getEntityTracker().trackedEntityHashTable.lookup(this.getEntityId());
 
-			look = this.getOrientation(1).getDirection(this.rotationYawHead, 0.0f);
-			this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
+			//Prevent premature syncing of position causing overly smoothed movement
+			if(tracker != null && tracker.updateCounter % tracker.updateFrequency == 0) {
+				Vec3d look = this.getOrientation(1).getDirection(this.rotationYaw, this.rotationPitch);
+				this.dataManager.set(ROTATION_BODY, new Rotations((float) look.x, (float) look.y, (float) look.z));
 
-			if(SpiderMod.DEBUG) {
-				Path path = this.getNavigator().getPath();
-				if(path != null) {
-					int i = 0;
-					for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
-						if(path.getCurrentPathIndex() + i < path.getCurrentPathLength()) {
-							PathPoint point = path.getPathPointFromIndex(path.getCurrentPathIndex() + i);
-							this.dataManager.set(pathingTarget, Optional.of(new BlockPos(point.x, point.y, point.z)));
-						} else {
+				look = this.getOrientation(1).getDirection(this.rotationYawHead, 0.0f);
+				this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
+
+				if(SpiderMod.DEBUG) {
+					Path path = this.getNavigator().getPath();
+					if(path != null) {
+						int i = 0;
+						for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
+							if(path.getCurrentPathIndex() + i < path.getCurrentPathLength()) {
+								PathPoint point = path.getPathPointFromIndex(path.getCurrentPathIndex() + i);
+								this.dataManager.set(pathingTarget, Optional.of(new BlockPos(point.x, point.y, point.z)));
+							} else {
+								this.dataManager.set(pathingTarget, Optional.absent());
+							}
+							i++;
+						}
+					} else {
+						for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 							this.dataManager.set(pathingTarget, Optional.absent());
 						}
-						i++;
-					}
-				} else {
-					for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
-						this.dataManager.set(pathingTarget, Optional.absent());
 					}
 				}
 			}
@@ -646,7 +650,7 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 				this.motionZ += movementDir.z * moveSpeed;
 			}
 		}
-
+		
 		this.motionX += stickingForce.x;
 		this.motionY += stickingForce.y;
 		this.motionZ += stickingForce.z;
@@ -687,6 +691,10 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 			float stepHeight = this.stepHeight;
 			this.stepHeight = 0;
 
+			boolean prevOnGround = this.onGround;
+			boolean prevCollidedHorizontally = this.collidedHorizontally;
+			boolean prevCollidedVertically = this.collidedVertically;
+
 			//Offset so that AABB is moved above the new surface
 			this.move(MoverType.SELF, detachedX ? -this.prevAttachedSides.x * 0.25f : 0, detachedY ? -this.prevAttachedSides.y * 0.25f : 0, detachedZ ? -this.prevAttachedSides.z * 0.25f : 0);
 
@@ -721,6 +729,10 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 				this.motionX = motion.x;
 				this.motionY = motion.y;
 				this.motionZ = motion.z;
+				this.onGround = prevOnGround;
+				this.collidedHorizontally = prevCollidedHorizontally;
+				this.collidedVertically = prevCollidedVertically;
+				this.collided = this.collidedHorizontally || this.collidedVertically;
 			} else {
 				this.motionX = this.motionY = this.motionZ = 0;
 			}

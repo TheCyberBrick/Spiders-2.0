@@ -10,15 +10,18 @@ import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.ConfigManager;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
+import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
 import net.minecraftforge.fml.common.SidedProxy;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import tcb.spiderstpo.common.entity.mob.BetterCaveSpiderEntity;
 import tcb.spiderstpo.common.entity.mob.BetterSpiderEntity;
+import tcb.spiderstpo.compat.mobends.MoBendsCompat;
 
 @Mod(modid = "spiderstpo", name = "Spiders 2.0", acceptedMinecraftVersions = "[1.12.2]", useMetadata = true)
 public class SpiderMod {
@@ -40,6 +43,13 @@ public class SpiderMod {
 		Entities.register();
 
 		proxy.preInit();
+	}
+
+	@EventHandler
+	public static void init(FMLInitializationEvent event) {
+		if(Loader.isModLoaded("mobends")) {
+			MoBendsCompat.register();
+		}
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)

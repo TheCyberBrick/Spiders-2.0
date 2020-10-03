@@ -15,7 +15,7 @@ public class Entities {
 	private static int id = 0;
 
 	private static void registerEntity(Class<? extends Entity> entityClass, String name) {
-		EntityRegistry.registerModEntity(new ResourceLocation("spiderstpo", name), entityClass, "spiderstpo." + name, id, SpiderMod.instance, 64, 3, true);
+		EntityRegistry.registerModEntity(new ResourceLocation("spiderstpo", name), entityClass, "spiderstpo." + name, id, SpiderMod.instance, 80, 3, true);
 		id++;
 	}
 }
