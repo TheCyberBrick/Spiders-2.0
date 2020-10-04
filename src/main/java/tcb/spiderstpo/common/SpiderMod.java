@@ -25,8 +25,6 @@ import tcb.spiderstpo.compat.mobends.MoBendsCompat;
 
 @Mod(modid = "spiderstpo", name = "Spiders 2.0", acceptedMinecraftVersions = "[1.12.2]", useMetadata = true)
 public class SpiderMod {
-	public static final boolean DEBUG = false;
-
 	@Instance("spiderstpo")
 	public static SpiderMod instance;
 

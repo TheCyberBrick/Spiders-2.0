@@ -30,10 +30,9 @@ import net.minecraft.util.math.Rotations;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.minecraft.world.WorldServer;
-import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
+import tcb.spiderstpo.common.Config;
 import tcb.spiderstpo.common.Matrix4f;
-import tcb.spiderstpo.common.SpiderMod;
 import tcb.spiderstpo.common.entity.movement.AdvancedClimberPathNavigator;
 import tcb.spiderstpo.common.entity.movement.AdvancedGroundPathNavigator;
 import tcb.spiderstpo.common.entity.movement.ClimberLookController;
@@ -42,6 +41,8 @@ import tcb.spiderstpo.common.entity.movement.IAdvancedPathFindingEntity;
 
 
 public abstract class AbstractClimberEntity extends EntityCreature implements IAdvancedPathFindingEntity {
+	public boolean pathFinderDebugPreview;
+
 	public static final ImmutableList<DataParameter<Optional<BlockPos>>> PATHING_TARGETS = ImmutableList.of(
 			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
 			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
@@ -92,7 +93,9 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 	protected void entityInit() {
 		super.entityInit();
 
-		if(SpiderMod.DEBUG) {
+		this.pathFinderDebugPreview = Config.pathFinderDebugPreview;
+
+		if(this.pathFinderDebugPreview) {
 			for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 				this.dataManager.register(pathingTarget, Optional.absent());
 			}
@@ -377,7 +380,7 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 				look = this.getOrientation(1).getDirection(this.rotationYawHead, 0.0f);
 				this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
 
-				if(SpiderMod.DEBUG) {
+				if(this.pathFinderDebugPreview) {
 					Path path = this.getNavigator().getPath();
 					if(path != null) {
 						int i = 0;
@@ -402,8 +405,8 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 
 	@Nullable
 	public BlockPos getPathingTarget(int i) {
-		if(SpiderMod.DEBUG) {
-			return this.dataManager.get(PATHING_TARGETS.get(i)).or((BlockPos)null);
+		if(this.pathFinderDebugPreview) {
+			return this.dataManager.get(PATHING_TARGETS.get(i)).orNull();
 		}
 		return null;
 	}
@@ -650,10 +653,6 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 				this.motionZ += movementDir.z * moveSpeed;
 			}
 		}
-		
-		this.motionX += stickingForce.x;
-		this.motionY += stickingForce.y;
-		this.motionZ += stickingForce.z;
 
 		double px = this.posX;
 		double py = this.posY;
@@ -661,6 +660,10 @@ public abstract class AbstractClimberEntity extends EntityCreature implements IA
 		Vec3d motion = new Vec3d(this.motionX, this.motionY, this.motionZ);
 
 		this.move(MoverType.SELF, motion.x, motion.y, motion.z);
+
+		this.motionX += stickingForce.x;
+		this.motionY += stickingForce.y;
+		this.motionZ += stickingForce.z;
 
 		this.prevAttachedSides = this.attachedSides;
 		this.attachedSides = new Vec3d(Math.abs(this.posX - px - motion.x) > 0.001D ? -Math.signum(motion.x) : 0, Math.abs(this.posY - py - motion.y) > 0.001D ? -Math.signum(motion.y) : 0, Math.abs(this.posZ - pz - motion.z) > 0.001D ? -Math.signum(motion.z) : 0);
