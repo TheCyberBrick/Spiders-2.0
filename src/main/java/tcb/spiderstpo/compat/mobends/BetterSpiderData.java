@@ -1,5 +1,7 @@
 package tcb.spiderstpo.compat.mobends;
 
+import java.util.List;
+
 import goblinbob.mobends.core.client.event.DataUpdateHandler;
 import goblinbob.mobends.core.client.model.ModelPartTransform;
 import goblinbob.mobends.core.data.LivingEntityData;
@@ -7,6 +9,7 @@ import goblinbob.mobends.core.util.GUtil;
 import goblinbob.mobends.standard.animation.controller.SpiderController;
 import net.minecraft.entity.monster.EntitySpider;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
 import tcb.spiderstpo.common.entity.mob.BetterSpiderEntity;
 
@@ -138,6 +141,15 @@ public class BetterSpiderData extends LivingEntityData<BetterSpiderEntity>
         crawlProgress += MathHelper.sqrt(this.motionX * this.motionX + this.motionY * this.motionY + this.motionZ * this.motionZ);
     }
 
+    @Override
+    public boolean calcOnGround() {
+    	if (this.onGroundOverride != null)
+            return this.onGroundOverride;
+
+        List<AxisAlignedBB> list = this.entity.world.getCollisionBoxes(this.entity, this.entity.getEntityBoundingBox().grow(0.025F, 0.025F, 0.025F));
+        return list.size() > 0;
+    }
+    
     public static class Limb
     {
 

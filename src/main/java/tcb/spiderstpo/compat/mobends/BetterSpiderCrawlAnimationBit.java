@@ -2,8 +2,11 @@ package tcb.spiderstpo.compat.mobends;
 
 import goblinbob.mobends.core.client.event.DataUpdateHandler;
 import goblinbob.mobends.standard.data.SpiderData;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.entity.monster.EntitySpider;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
 import tcb.spiderstpo.common.entity.mob.BetterSpiderEntity;
 
 /**
@@ -82,7 +85,9 @@ public class BetterSpiderCrawlAnimationBit extends BetterSpiderAnimationBitBase
         data.renderRotation.orientX(-90F);
         data.renderRotation.setSmoothness(.6F).rotateY(renderRotationY);*/
 
-        data.localOffset.slideTo(0, -10.0F, 0, 0.5F);
+        data.localOffset.slideToZero();
+        data.globalOffset.slideToZero();
+        data.renderRotation.orientZero();
         data.centerRotation.orientZero();
     }
 

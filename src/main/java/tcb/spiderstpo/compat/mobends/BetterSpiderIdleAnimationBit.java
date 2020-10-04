@@ -59,7 +59,7 @@ public class BetterSpiderIdleAnimationBit extends AnimationBit<BetterSpiderData>
 		final float headYaw = data.headYaw.get();
 		final float headPitch = data.headPitch.get();
 		
-		double groundLevel = Math.sin(ticks * 0.1F) * 0.5 + (MathHelper.sqrt(spider.stickingOffsetX * spider.stickingOffsetX + spider.stickingOffsetY * spider.stickingOffsetY + spider.stickingOffsetZ * spider.stickingOffsetZ) - spider.getVerticalOffset(1)) * 16;
+		double groundLevel = Math.sin(ticks * 0.1F) * 0.5;
 		final float touchdown = Math.min(data.getTicksAfterTouchdown() / KNEEL_DURATION, 1.0F);
 		
 		if (touchdown < 1.0F)

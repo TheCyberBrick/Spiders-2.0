@@ -47,9 +47,7 @@ public class SpiderMod {
 
 	@EventHandler
 	public static void init(FMLInitializationEvent event) {
-		if(Loader.isModLoaded("mobends")) {
-			MoBendsCompat.register();
-		}
+		MoBendsCompat.init();
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)

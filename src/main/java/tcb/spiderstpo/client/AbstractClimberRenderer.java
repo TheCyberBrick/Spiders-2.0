@@ -4,7 +4,9 @@ import net.minecraft.client.model.ModelBase;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.entity.RenderLiving;
 import net.minecraft.client.renderer.entity.RenderManager;
+import net.minecraft.util.math.MathHelper;
 import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
+import tcb.spiderstpo.compat.mobends.MoBendsCompat;
 
 public abstract class AbstractClimberRenderer<T extends AbstractClimberEntity> extends RenderLiving<T> {
 	public AbstractClimberRenderer(RenderManager rendermanagerIn, ModelBase modelbaseIn, float shadowsizeIn) {
@@ -24,7 +26,7 @@ public abstract class AbstractClimberRenderer<T extends AbstractClimberEntity> e
 		x += rox;
 		y += roy;
 		z += roz;
-
+		
 		super.doRender(entity, x, y, z, entityYaw, partialTicks);
 	}
 
@@ -37,7 +39,11 @@ public abstract class AbstractClimberRenderer<T extends AbstractClimberEntity> e
 		GlStateManager.rotate(interpolatedOrientation.yaw, 0, 1, 0);
 		GlStateManager.rotate(interpolatedOrientation.pitch, 1, 0, 0);
 		GlStateManager.rotate((float)Math.signum(0.5f - orientation.componentY - orientation.componentZ - orientation.componentX) * interpolatedOrientation.yaw, 0, 1, 0);
-
+		
+		if(MoBendsCompat.isEnabled()) {
+			GlStateManager.translate(0, (1.0f - Math.abs(interpolatedOrientation.normal.y)) * -0.2f + (MathHelper.clamp(interpolatedOrientation.normal.y, -1.0f, -0.5f) + 0.5f) * 0.25f, 0);
+		}
+		
 		this.applyLocalRotations(entity, ageInTicks, rotationYaw, partialTicks);
 	}
 

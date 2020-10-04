@@ -68,7 +68,7 @@ public class BetterSpiderController implements IAnimationController<BetterSpider
 		}
 		else
 		{
-			if (Math.abs(spider.getOrientation(1).normal.y) < 0.5f)
+			if (spider.getOrientation(1).normal.y < 0.5f)
 			{
 				this.layerBase.playOrContinueBit(bitClimb, spiderData);
 			}
