@@ -12,12 +12,12 @@ public class Config {
 		ForgeConfigSpec.Builder builder = new ForgeConfigSpec.Builder();
 
 		REPLACE_NATURAL_SPAWNS = builder
-				.comment("Whether natural spider spawns should be replaced. This includes e.g. mob spawners and spawn eggs, but not commands.")
-				.define("replace_natural_spawns", true);
+			.comment("Whether natural spider spawns should be replaced. This includes e.g. mob spawners and spawn eggs, but not commands.")
+			.define("replace_natural_spawns", true);
 
 		REPLACE_ANY_SPAWNS = builder
-				.comment("Whether any spider spawns should be replaced. This also applies retroactively to already existing spiders.")
-				.define("replace_any_spawns", true);
+			.comment("Whether any spider spawns should be replaced. This also applies retroactively to already existing spiders.")
+			.define("replace_any_spawns", true);
 
 		COMMON = builder.build();
 	}

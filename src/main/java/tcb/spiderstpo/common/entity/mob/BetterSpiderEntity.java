@@ -1,30 +1,10 @@
 package tcb.spiderstpo.common.entity.mob;
 
-import java.util.function.Predicate;
-
-import javax.annotation.Nullable;
-
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.entity.CreatureAttribute;
-import net.minecraft.entity.EntitySize;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ILivingEntityData;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.Pose;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.entity.ai.attributes.AttributeModifierMap;
-import net.minecraft.entity.ai.attributes.Attributes;
-import net.minecraft.entity.ai.goal.HurtByTargetGoal;
-import net.minecraft.entity.ai.goal.LeapAtTargetGoal;
-import net.minecraft.entity.ai.goal.LookAtGoal;
-import net.minecraft.entity.ai.goal.LookRandomlyGoal;
-import net.minecraft.entity.ai.goal.MeleeAttackGoal;
-import net.minecraft.entity.ai.goal.NearestAttackableTargetGoal;
-import net.minecraft.entity.ai.goal.SwimGoal;
-import net.minecraft.entity.ai.goal.WaterAvoidingRandomWalkingGoal;
+import net.minecraft.entity.*;
+import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.monster.IMob;
-import net.minecraft.entity.monster.MonsterEntity;
 import net.minecraft.entity.monster.SkeletonEntity;
 import net.minecraft.entity.monster.SpiderEntity;
 import net.minecraft.entity.passive.IronGolemEntity;
@@ -36,18 +16,17 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.potion.Effect;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
-import net.minecraft.util.DamageSource;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.SoundCategory;
-import net.minecraft.util.SoundEvent;
-import net.minecraft.util.SoundEvents;
+import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
-import net.minecraft.world.IServerWorld;
+import net.minecraft.world.IWorld;
 import net.minecraft.world.World;
 import tcb.spiderstpo.common.SpiderMod;
+
+import javax.annotation.Nullable;
+import java.util.function.Predicate;
 
 public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	public BetterSpiderEntity(EntityType<? extends AbstractClimberEntity> type, World world) {
@@ -71,8 +50,12 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 		this.targetSelector.addGoal(3, new BetterSpiderEntity.TargetGoal<>(this, IronGolemEntity.class));
 	}
 
-	public static AttributeModifierMap.MutableAttribute getAttributeMap() {
-		return MonsterEntity.func_234295_eP_().func_233815_a_(Attributes.field_233818_a_, 24.0D).func_233815_a_(Attributes.field_233821_d_, (double)0.3F);
+	@Override
+	protected void registerAttributes() {
+		super.registerAttributes();
+		this.getAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(24);
+		this.getAttribute(SharedMonsterAttributes.MOVEMENT_SPEED).setBaseValue(.3);
+		this.getAttributes().registerAttribute(SharedMonsterAttributes.ATTACK_DAMAGE);
 	}
 
 	@Override
@@ -94,7 +77,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	protected void updateIdletime() {
 		float f = this.getBrightness();
-		if(f > 0.5F) {
+		if (f > 0.5F) {
 			this.idleTime += 2;
 		}
 	}
@@ -116,7 +99,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	@Override
 	public boolean attackEntityFrom(DamageSource source, float amount) {
-		return this.isInvulnerableTo(source) ? false : super.attackEntityFrom(source, amount);
+		return !this.isInvulnerableTo(source) && super.attackEntityFrom(source, amount);
 	}
 
 	@Override
@@ -130,14 +113,9 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	}
 
 	@Override
-	protected boolean func_230282_cS_() {
-		return true;
-	}
-
-	@Override
 	public ItemStack findAmmo(ItemStack shootable) {
 		if (shootable.getItem() instanceof ShootableItem) {
-			Predicate<ItemStack> predicate = ((ShootableItem)shootable.getItem()).getAmmoPredicate();
+			Predicate<ItemStack> predicate = ((ShootableItem) shootable.getItem()).getAmmoPredicate();
 			ItemStack itemstack = ShootableItem.getHeldAmmo(this, predicate);
 			return itemstack.isEmpty() ? new ItemStack(Items.ARROW) : itemstack;
 		} else {
@@ -147,7 +125,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	@Override
 	public double getMountedYOffset() {
-		return (double)(this.getHeight() * 0.5F);
+		return this.getHeight() * 0.5F;
 	}
 
 	@Override
@@ -171,8 +149,8 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	}
 
 	@Override
-	public void setMotionMultiplier(BlockState state, Vector3d motionMultiplierIn) {
-		if(!state.isIn(Blocks.COBWEB)) {
+	public void setMotionMultiplier(BlockState state, Vec3d motionMultiplierIn) {
+		if (!state.getBlock().equals(Blocks.COBWEB)) {
 			super.setMotionMultiplier(state, motionMultiplierIn);
 		}
 	}
@@ -184,7 +162,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	@Override
 	public boolean isPotionApplicable(EffectInstance potioneffectIn) {
-		if(potioneffectIn.getPotion() == Effects.POISON) {
+		if (potioneffectIn.getPotion() == Effects.POISON) {
 			net.minecraftforge.event.entity.living.PotionEvent.PotionApplicableEvent event = new net.minecraftforge.event.entity.living.PotionEvent.PotionApplicableEvent(this, potioneffectIn);
 			net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event);
 			return event.getResult() == net.minecraftforge.eventbus.api.Event.Result.ALLOW;
@@ -194,25 +172,25 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	@Override
 	@Nullable
-	public ILivingEntityData onInitialSpawn(IServerWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
+	public ILivingEntityData onInitialSpawn(IWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
 		spawnDataIn = super.onInitialSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
-		if(worldIn.getRandom().nextInt(100) == 0) {
+		if (worldIn.getRandom().nextInt(100) == 0) {
 			SkeletonEntity skeletonentity = EntityType.SKELETON.create(this.world);
 			skeletonentity.setLocationAndAngles(this.getPosX(), this.getPosY(), this.getPosZ(), this.rotationYaw, 0.0F);
-			skeletonentity.onInitialSpawn(worldIn, difficultyIn, reason, (ILivingEntityData)null, (CompoundNBT)null);
+			skeletonentity.onInitialSpawn(worldIn, difficultyIn, reason, null, null);
 			skeletonentity.startRiding(this);
 		}
 
-		if(spawnDataIn == null) {
+		if (spawnDataIn == null) {
 			spawnDataIn = new SpiderEntity.GroupData();
-			if(worldIn.getDifficulty() == Difficulty.HARD && worldIn.getRandom().nextFloat() < 0.1F * difficultyIn.getClampedAdditionalDifficulty()) {
-				((SpiderEntity.GroupData)spawnDataIn).setRandomEffect(worldIn.getRandom());
+			if (worldIn.getDifficulty() == Difficulty.HARD && worldIn.getRandom().nextFloat() < 0.1F * difficultyIn.getClampedAdditionalDifficulty()) {
+				((SpiderEntity.GroupData) spawnDataIn).setRandomEffect(worldIn.getRandom());
 			}
 		}
 
-		if(spawnDataIn instanceof SpiderEntity.GroupData) {
-			Effect effect = ((SpiderEntity.GroupData)spawnDataIn).effect;
-			if(effect != null) {
+		if (spawnDataIn instanceof SpiderEntity.GroupData) {
+			Effect effect = ((SpiderEntity.GroupData) spawnDataIn).effect;
+			if (effect != null) {
 				this.addPotionEffect(new EffectInstance(effect, Integer.MAX_VALUE));
 			}
 		}
@@ -242,7 +220,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 				return false;
 			} else if (!livingentity.isAlive()) {
 				return false;
-			} else if (!this.attacker.isWithinHomeDistanceFromPosition(livingentity.func_233580_cy_())) {
+			} else if (!this.attacker.isWithinHomeDistanceFromPosition(livingentity.getPosition())) {
 				return false;
 			} else {
 				return true;
@@ -250,7 +228,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 			float f = this.attacker.getBrightness();
 			if (f >= 0.5F && this.attacker.getRNG().nextInt(100) == 0) {
-				this.attacker.setAttackTarget((LivingEntity)null);
+				this.attacker.setAttackTarget(null);
 				return false;
 			} else {
 				return super.shouldContinueExecuting();
@@ -259,7 +237,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 		@Override
 		protected double getAttackReachSqr(LivingEntity attackTarget) {
-			return (double)(4.0F + attackTarget.getWidth());
+			return 4.0F + attackTarget.getWidth();
 		}
 	}
 
@@ -279,7 +257,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 			return super.shouldExecute();*/
 
 			float f = this.goalOwner.getBrightness();
-			return f >= 0.5F ? false : super.shouldExecute();
+			return !(f >= 0.5F) && super.shouldExecute();
 		}
 	}
 }

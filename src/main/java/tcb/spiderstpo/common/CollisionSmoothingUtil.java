@@ -1,14 +1,12 @@
 package tcb.spiderstpo.common;
 
-import java.util.List;
-
-import javax.annotation.Nullable;
-
-import org.apache.commons.lang3.tuple.Pair;
-
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.Vec3d;
+import org.apache.commons.lang3.tuple.Pair;
+
+import javax.annotation.Nullable;
+import java.util.List;
 
 public class CollisionSmoothingUtil {
 	private static float invSqrt(float x) {
@@ -25,7 +23,7 @@ public class CollisionSmoothingUtil {
 
 		boolean first = true;
 
-		for(int i = 0; i < erx.length; i++) {
+		for (int i = 0; i < erx.length; i++) {
 			float rsx = x - ecx[i];
 			float rsy = y - ecy[i];
 			float rsz = z - ecz[i];
@@ -44,7 +42,7 @@ public class CollisionSmoothingUtil {
 			float k2 = invSqrt(prx2 * prx2 + pry2 * pry2 + prz2 * prz2);
 			float ellipsoidDst = k1 * (k1 - 1.0f) * k2;*/
 
-			if(!first) {
+			if (!first) {
 				//Smooth min - https://www.iquilezles.org/www/articles/smin/smin.htm
 				float h = MathHelper.clamp(0.5f + 0.5f * (ellipsoidDst - sdfDst) * invSmoothingRange, 0.0f, 1.0f);
 				sdfDst = ellipsoidDst + (sdfDst - ellipsoidDst) * h - smoothingRange * h * (1.0f - h);
@@ -58,8 +56,8 @@ public class CollisionSmoothingUtil {
 	}
 
 	@Nullable
-	public static Pair<Vector3d, Vector3d> findClosestPoint(List<AxisAlignedBB> boxes, float smoothingRange, float boxScale, float dx, int iters, float threshold, Vector3d p) {
-		if(boxes.isEmpty()) {
+	public static Pair<Vec3d, Vec3d> findClosestPoint(List<AxisAlignedBB> boxes, float smoothingRange, float boxScale, float dx, int iters, float threshold, Vec3d p) {
+		if (boxes.isEmpty()) {
 			return null;
 		}
 
@@ -78,10 +76,10 @@ public class CollisionSmoothingUtil {
 		float[] ecz = new float[boxes.size()];
 
 		int i = 0;
-		for(AxisAlignedBB box : boxes) {
-			erx[i] = 1.0f / ((float)(box.maxX - box.minX) / 2 * boxScale);
-			ery[i] = 1.0f / ((float)(box.maxY - box.minY) / 2 * boxScale);
-			erz[i] = 1.0f / ((float)(box.maxZ - box.minZ) / 2 * boxScale);
+		for (AxisAlignedBB box : boxes) {
+			erx[i] = 1.0f / ((float) (box.maxX - box.minX) / 2 * boxScale);
+			ery[i] = 1.0f / ((float) (box.maxY - box.minY) / 2 * boxScale);
+			erz[i] = 1.0f / ((float) (box.maxZ - box.minZ) / 2 * boxScale);
 
 			ecx[i] = (float) ((box.minX + box.maxX) / 2 - p.x);
 			ecy[i] = (float) ((box.minY + box.maxY) / 2 - p.y);
@@ -90,7 +88,7 @@ public class CollisionSmoothingUtil {
 			i++;
 		}
 
-		for(int j = 0; j < iters; j++) {
+		for (int j = 0; j < iters; j++) {
 			float dst = sampleSdf(erx, ery, erz, ecx, ecy, ecz, px, py, pz, smoothingRange, invSmoothingRange);
 
 			float fx1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, px + dx, py, pz, smoothingRange, invSmoothingRange);
@@ -105,7 +103,7 @@ public class CollisionSmoothingUtil {
 			gy *= m;
 			gz *= m;
 
-			if(Float.isNaN(gx) || Float.isNaN(gy) || Float.isNaN(gz) || Double.isNaN(px) || Double.isNaN(py) || Double.isNaN(pz)) {
+			if (Float.isNaN(gx) || Float.isNaN(gy) || Float.isNaN(gz) || Double.isNaN(px) || Double.isNaN(py) || Double.isNaN(pz)) {
 				return null;
 			}
 
@@ -115,8 +113,8 @@ public class CollisionSmoothingUtil {
 			py += gy * step;
 			pz += gz * step;
 
-			if(dst < threshold) {
-				return Pair.of(new Vector3d(p.x + px, p.y + py, p.z + pz), new Vector3d(-gx, -gy, -gz).normalize());
+			if (dst < threshold) {
+				return Pair.of(new Vec3d(p.x + px, p.y + py, p.z + pz), new Vec3d(-gx, -gy, -gz).normalize());
 			}
 		}
 

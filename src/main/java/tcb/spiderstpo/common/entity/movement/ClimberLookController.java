@@ -1,7 +1,7 @@
 package tcb.spiderstpo.common.entity.movement;
 
 import net.minecraft.entity.ai.controller.LookController;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.Vec3d;
 import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
 
 public class ClimberLookController extends LookController {
@@ -14,13 +14,13 @@ public class ClimberLookController extends LookController {
 
 	@Override
 	protected float getTargetPitch() {
-		Vector3d dir = new Vector3d(this.posX - this.mob.getPosX(), this.posY - this.mob.getPosYEye(), this.posZ - this.mob.getPosZ());
+		Vec3d dir = new Vec3d(this.posX - this.mob.getPosX(), this.posY - this.mob.getPosYEye(), this.posZ - this.mob.getPosZ());
 		return this.climber.getOrientation(1).getRotation(dir).getRight();
 	}
 
 	@Override
 	protected float getTargetYaw() {
-		Vector3d dir = new Vector3d(this.posX - this.mob.getPosX(), this.posY - this.mob.getPosYEye(), this.posZ - this.mob.getPosZ());
+		Vec3d dir = new Vec3d(this.posX - this.mob.getPosX(), this.posY - this.mob.getPosYEye(), this.posZ - this.mob.getPosZ());
 		return this.climber.getOrientation(1).getRotation(dir).getLeft();
 	}
 }

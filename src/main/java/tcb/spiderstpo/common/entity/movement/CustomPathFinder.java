@@ -1,43 +1,23 @@
 package tcb.spiderstpo.common.entity.movement;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-
-import javax.annotation.Nullable;
-
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.MobEntity;
-import net.minecraft.pathfinding.FlaggedPathPoint;
-import net.minecraft.pathfinding.NodeProcessor;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.pathfinding.PathFinder;
-import net.minecraft.pathfinding.PathHeap;
-import net.minecraft.pathfinding.PathPoint;
+import net.minecraft.pathfinding.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.Region;
 
+import javax.annotation.Nullable;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 public class CustomPathFinder extends PathFinder {
+	public static final Heuristic DEFAULT_HEURISTIC = (start, end, isTargetHeuristic) -> start.func_224757_c(end); //distanceManhattan
 	private final PathHeap path = new PathHeap();
 	private final PathPoint[] pathOptions = new PathPoint[32];
 	private final NodeProcessor nodeProcessor;
-
 	private int maxExpansions = 200;
-
-	public static interface Heuristic {
-		public float compute(PathPoint start, PathPoint end, boolean isTargetHeuristic);
-	}
-
-	public static final Heuristic DEFAULT_HEURISTIC = (start, end, isTargetHeuristic) -> start.func_224757_c(end); //distanceManhattan
-
 	private Heuristic heuristic = DEFAULT_HEURISTIC;
 
 	public CustomPathFinder(NodeProcessor processor, int maxExpansions) {
@@ -67,15 +47,13 @@ public class CustomPathFinder extends PathFinder {
 		this.nodeProcessor.func_225578_a_(region, entity);
 		PathPoint pathpoint = this.nodeProcessor.getStart();
 		Map<FlaggedPathPoint, BlockPos> map = checkpoints.stream().collect(Collectors.toMap((p_224782_1_) -> {
-			return this.nodeProcessor.func_224768_a((double)p_224782_1_.getX(), (double)p_224782_1_.getY(), (double)p_224782_1_.getZ());
+			return this.nodeProcessor.func_224768_a(p_224782_1_.getX(), p_224782_1_.getY(), p_224782_1_.getZ());
 		}, Function.identity()));
 		Path path = this.findPath(pathpoint, map, maxDistance, checkpointRange, maxExpansionsMultiplier);
 		this.nodeProcessor.postProcess();
 		return path;
 	}
 
-	//TODO Re-implement custom heuristics
-	
 	@Nullable
 	private Path findPath(PathPoint start, Map<FlaggedPathPoint, BlockPos> mappedCheckpoints, float maxDistance, int checkpointRange, float maxExpansionsMultiplier) {
 		Set<FlaggedPathPoint> checkpoints = mappedCheckpoints.keySet();
@@ -86,9 +64,9 @@ public class CustomPathFinder extends PathFinder {
 		this.path.addPoint(start);
 		int i = 0;
 		Set<FlaggedPathPoint> crossedCheckpoints = Sets.newHashSetWithExpectedSize(checkpoints.size());
-		int j = (int)(this.maxExpansions * maxExpansionsMultiplier);
+		int j = (int) (this.maxExpansions * maxExpansionsMultiplier);
 
-		while(!this.path.isPathEmpty()) {
+		while (!this.path.isPathEmpty()) {
 			++i;
 			if (i >= j) {
 				break;
@@ -97,8 +75,8 @@ public class CustomPathFinder extends PathFinder {
 			PathPoint pathpoint = this.path.dequeue();
 			pathpoint.visited = true;
 
-			for(FlaggedPathPoint flaggedpathpoint : checkpoints) {
-				if (pathpoint.func_224757_c(flaggedpathpoint) <= (float)checkpointRange) {
+			for (FlaggedPathPoint flaggedpathpoint : checkpoints) {
+				if (pathpoint.func_224757_c(flaggedpathpoint) <= (float) checkpointRange) {
 					flaggedpathpoint.func_224764_e();
 					crossedCheckpoints.add(flaggedpathpoint);
 				}
@@ -111,7 +89,7 @@ public class CustomPathFinder extends PathFinder {
 			if (!(pathpoint.distanceTo(start) >= maxDistance)) {
 				int k = this.nodeProcessor.func_222859_a(this.pathOptions, pathpoint);
 
-				for(int l = 0; l < k; ++l) {
+				for (int l = 0; l < k; ++l) {
 					PathPoint pathpoint1 = this.pathOptions[l];
 					float f = pathpoint.distanceTo(pathpoint1);
 					pathpoint1.field_222861_j = pathpoint.field_222861_j + f;
@@ -132,26 +110,28 @@ public class CustomPathFinder extends PathFinder {
 		}
 
 		Optional<Path> path;
-		if(!crossedCheckpoints.isEmpty()) {
+		if (!crossedCheckpoints.isEmpty()) {
 			path = crossedCheckpoints.stream()
-					.map((mappedCheckpoint) -> {
-						return this.func_224780_a(mappedCheckpoint.func_224763_d(), mappedCheckpoints.get(mappedCheckpoint), true);
-					})
-					.min(Comparator.comparingInt(Path::getCurrentPathLength));
+				.map((mappedCheckpoint) -> {
+					return this.func_224780_a(mappedCheckpoint.func_224763_d(), mappedCheckpoints.get(mappedCheckpoint), true);
+				})
+				.min(Comparator.comparingInt(Path::getCurrentPathLength));
 		} else {
 			path = checkpoints.stream()
-					.map((mappedCheckpoint) -> {
-						return this.func_224780_a(mappedCheckpoint.func_224763_d(), mappedCheckpoints.get(mappedCheckpoint), false);
-					})
-					.min(Comparator.comparingDouble(Path::func_224769_l).thenComparingInt(Path::getCurrentPathLength));
+				.map((mappedCheckpoint) -> {
+					return this.func_224780_a(mappedCheckpoint.func_224763_d(), mappedCheckpoints.get(mappedCheckpoint), false);
+				})
+				.min(Comparator.comparingDouble(Path::func_224769_l).thenComparingInt(Path::getCurrentPathLength));
 		}
 		return !path.isPresent() ? null : path.get();
 	}
 
+	//TODO Re-implement custom heuristics
+
 	private float func_224776_a(PathPoint p_224776_1_, Set<FlaggedPathPoint> p_224776_2_) {
 		float f = Float.MAX_VALUE;
 
-		for(FlaggedPathPoint flaggedpathpoint : p_224776_2_) {
+		for (FlaggedPathPoint flaggedpathpoint : p_224776_2_) {
 			float f1 = p_224776_1_.distanceTo(flaggedpathpoint);
 			flaggedpathpoint.func_224761_a(f1, p_224776_1_);
 			f = Math.min(f1, f);
@@ -165,12 +145,16 @@ public class CustomPathFinder extends PathFinder {
 		PathPoint pathpoint = start;
 		points.add(0, start);
 
-		while(pathpoint.previous != null) {
+		while (pathpoint.previous != null) {
 			pathpoint = pathpoint.previous;
 			points.add(0, pathpoint);
 		}
 
 		return new Path(points, target, isCheckpoint);
+	}
+
+	public interface Heuristic {
+		float compute(PathPoint start, PathPoint end, boolean isTargetHeuristic);
 	}
 
 	/*@Override
