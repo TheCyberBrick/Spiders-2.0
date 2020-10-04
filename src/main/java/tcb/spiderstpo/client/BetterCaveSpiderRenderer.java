@@ -1,7 +1,6 @@
 package tcb.spiderstpo.client;
 
 import com.mojang.blaze3d.matrix.MatrixStack;
-
 import net.minecraft.client.renderer.entity.EntityRendererManager;
 import net.minecraft.util.ResourceLocation;
 import tcb.spiderstpo.common.entity.mob.BetterSpiderEntity;

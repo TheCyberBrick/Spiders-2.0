@@ -1,7 +1,7 @@
 package tcb.spiderstpo.common;
 
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.Vec3d;
 
 public class Matrix4f {
 	public float m00, m01, m02, m03;
@@ -11,25 +11,6 @@ public class Matrix4f {
 
 	public Matrix4f() {
 		this.m00 = this.m11 = this.m22 = this.m33 = 1;
-	}
-
-	public Matrix4f(Matrix4f matrix) {
-		this.m00 = matrix.m00;
-		this.m01 = matrix.m01;
-		this.m02 = matrix.m02;
-		this.m03 = matrix.m03;
-		this.m10 = matrix.m10;
-		this.m11 = matrix.m11;
-		this.m12 = matrix.m12;
-		this.m13 = matrix.m13;
-		this.m20 = matrix.m20;
-		this.m21 = matrix.m21;
-		this.m22 = matrix.m22;
-		this.m23 = matrix.m23;
-		this.m30 = matrix.m30;
-		this.m31 = matrix.m31;
-		this.m32 = matrix.m32;
-		this.m33 = matrix.m33;
 	}
 
 	public Matrix4f(float angle, float x, float y, float z) {
@@ -66,11 +47,11 @@ public class Matrix4f {
 	}
 
 	public void multiply(Matrix4f m) {
-		float 
-		m00, m01, m02, m03,
-		m10, m11, m12, m13,
-		m20, m21, m22, m23,
-		m30, m31, m32, m33;
+		float
+			m00, m01, m02, m03,
+			m10, m11, m12, m13,
+			m20, m21, m22, m23,
+			m30, m31, m32, m33;
 
 		m00 = this.m00 * m.m00 + this.m01 * m.m10 + this.m02 * m.m20 + this.m03 * m.m30;
 		m01 = this.m00 * m.m01 + this.m01 * m.m11 + this.m02 * m.m21 + this.m03 * m.m31;
@@ -107,11 +88,11 @@ public class Matrix4f {
 		this.m33 = m33;
 	}
 
-	public Vector3d multiply(Vector3d point) {
+	public Vec3d multiply(Vec3d point) {
 		return this.multiply(point, 0);
 	}
 
-	public Vector3d multiply(Vector3d point, float w) {
-		return new Vector3d(this.m00 * point.x + this.m01 * point.y + this.m02 * point.z + this.m03 * w, this.m10 * point.x + this.m11 * point.y + this.m12 * point.z + this.m13 * w, this.m20 * point.x + this.m21 * point.y + this.m22 * point.z + this.m23 * w);
+	public Vec3d multiply(Vec3d point, float w) {
+		return new Vec3d(this.m00 * point.x + this.m01 * point.y + this.m02 * point.z + this.m03 * w, this.m10 * point.x + this.m11 * point.y + this.m12 * point.z + this.m13 * w, this.m20 * point.x + this.m21 * point.y + this.m22 * point.z + this.m23 * w);
 	}
 }
