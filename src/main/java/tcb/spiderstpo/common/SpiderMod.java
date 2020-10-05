@@ -42,8 +42,6 @@ import tcb.spiderstpo.common.entity.mob.BetterSpiderEntity;
 
 @Mod("spiderstpo")
 public class SpiderMod {
-	public static final boolean DEBUG = false;
-
 	private static final DeferredRegister<EntityType<?>> ENTITIES = DeferredRegister.create(ForgeRegistries.ENTITIES, "spiderstpo");
 
 	public static final RegistryObject<EntityType<BetterSpiderEntity>> BETTER_SPIDER = ENTITIES.register("better_spider", () -> {
