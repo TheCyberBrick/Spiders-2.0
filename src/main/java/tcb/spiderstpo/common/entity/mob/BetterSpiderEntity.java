@@ -43,6 +43,7 @@ import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.IWorld;
@@ -73,6 +74,11 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	public static AttributeModifierMap.MutableAttribute getAttributeMap() {
 		return MonsterEntity.func_234295_eP_().func_233815_a_(Attributes.field_233818_a_, 24.0D).func_233815_a_(Attributes.field_233821_d_, (double)0.3F);
+	}
+
+	@Override
+	protected ITextComponent getProfessionName() {
+		return EntityType.SPIDER.getName();
 	}
 
 	@Override

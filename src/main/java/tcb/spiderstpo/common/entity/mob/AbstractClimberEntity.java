@@ -34,7 +34,10 @@ import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Rotations;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
+import net.minecraft.world.server.ChunkManager.EntityTracker;
+import net.minecraft.world.server.ServerWorld;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
+import tcb.spiderstpo.common.Config;
 import tcb.spiderstpo.common.Matrix4f;
 import tcb.spiderstpo.common.SpiderMod;
 import tcb.spiderstpo.common.entity.movement.AdvancedClimberPathNavigator;
@@ -45,6 +48,8 @@ import tcb.spiderstpo.common.entity.movement.IAdvancedPathFindingEntity;
 
 
 public abstract class AbstractClimberEntity extends CreatureEntity implements IAdvancedPathFindingEntity {
+	public boolean pathFinderDebugPreview;
+	
 	public static final ImmutableList<DataParameter<Optional<BlockPos>>> PATHING_TARGETS = ImmutableList.of(
 			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
 			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
@@ -98,7 +103,9 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 	protected void registerData() {
 		super.registerData();
 
-		if(SpiderMod.DEBUG) {
+		this.pathFinderDebugPreview = Config.PATH_FINDER_DEBUG_PREVIEW.get();
+		
+		if(this.pathFinderDebugPreview) {
 			for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 				this.dataManager.register(pathingTarget, Optional.empty());
 			}
@@ -379,29 +386,34 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 	public void tick() {
 		super.tick();
 
-		if(!this.world.isRemote) {
-			Vector3d look = this.getOrientation(1).getDirection(this.rotationYaw, this.rotationPitch);
-			this.dataManager.set(ROTATION_BODY, new Rotations((float) look.x, (float) look.y, (float) look.z));
-
-			look = this.getOrientation(1).getDirection(this.rotationYawHead, 0.0f);
-			this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
-
-			if(SpiderMod.DEBUG) {
-				Path path = this.getNavigator().getPath();
-				if(path != null) {
-					int i = 0;
-					for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
-						if(path.getCurrentPathIndex() + i < path.getCurrentPathLength()) {
-							PathPoint point = path.getPathPointFromIndex(path.getCurrentPathIndex() + i);
-							this.dataManager.set(pathingTarget, Optional.of(new BlockPos(point.x, point.y, point.z)));
-						} else {
+		if(!this.world.isRemote && this.world instanceof ServerWorld) {
+			EntityTracker entityTracker = ((ServerWorld) this.world).getChunkProvider().chunkManager.entities.get(this.getEntityId());
+			
+			//Prevent premature syncing of position causing overly smoothed movement
+			if(entityTracker != null && entityTracker.entry.updateCounter % entityTracker.entry.updateFrequency == 0) {
+				Vector3d look = this.getOrientation(1).getDirection(this.rotationYaw, this.rotationPitch);
+				this.dataManager.set(ROTATION_BODY, new Rotations((float) look.x, (float) look.y, (float) look.z));
+	
+				look = this.getOrientation(1).getDirection(this.rotationYawHead, 0.0f);
+				this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
+	
+				if(this.pathFinderDebugPreview) {
+					Path path = this.getNavigator().getPath();
+					if(path != null) {
+						int i = 0;
+						for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
+							if(path.getCurrentPathIndex() + i < path.getCurrentPathLength()) {
+								PathPoint point = path.getPathPointFromIndex(path.getCurrentPathIndex() + i);
+								this.dataManager.set(pathingTarget, Optional.of(new BlockPos(point.x, point.y, point.z)));
+							} else {
+								this.dataManager.set(pathingTarget, Optional.empty());
+							}
+							i++;
+						}
+					} else {
+						for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 							this.dataManager.set(pathingTarget, Optional.empty());
 						}
-						i++;
-					}
-				} else {
-					for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
-						this.dataManager.set(pathingTarget, Optional.empty());
 					}
 				}
 			}
@@ -410,7 +422,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 	@Nullable
 	public BlockPos getPathingTarget(int i) {
-		if(SpiderMod.DEBUG) {
+		if(this.pathFinderDebugPreview) {
 			return this.dataManager.get(PATHING_TARGETS.get(i)).orElse(null);
 		}
 		return null;
@@ -659,8 +671,6 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 			}
 		}
 
-		this.setMotion(this.getMotion().add(stickingForce));
-
 		double px = this.getPosX();
 		double py = this.getPosY();
 		double pz = this.getPosZ();
@@ -671,6 +681,8 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		this.prevAttachedSides = this.attachedSides;
 		this.attachedSides = new Vector3d(Math.abs(this.getPosX() - px - motion.x) > 0.001D ? -Math.signum(motion.x) : 0, Math.abs(this.getPosY() - py - motion.y) > 0.001D ? -Math.signum(motion.y) : 0, Math.abs(this.getPosZ() - pz - motion.z) > 0.001D ? -Math.signum(motion.z) : 0);
 
+		this.setMotion(this.getMotion().add(stickingForce));
+		
 		float slipperiness = 0.91f;
 
 		if(this.onGround) {
@@ -699,6 +711,10 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 			float stepHeight = this.stepHeight;
 			this.stepHeight = 0;
 
+			boolean prevOnGround = this.onGround;
+			boolean prevCollidedHorizontally = this.collidedHorizontally;
+			boolean prevCollidedVertically = this.collidedVertically;
+			
 			//Offset so that AABB is moved above the new surface
 			this.move(MoverType.SELF, new Vector3d(detachedX ? -this.prevAttachedSides.x * 0.25f : 0, detachedY ? -this.prevAttachedSides.y * 0.25f : 0, detachedZ ? -this.prevAttachedSides.z * 0.25f : 0));
 
@@ -731,6 +747,9 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 				this.setBoundingBox(aabb);
 				this.resetPositionToBB();
 				this.setMotion(motion);
+				this.onGround = prevOnGround;
+				this.collidedHorizontally = prevCollidedHorizontally;
+				this.collidedVertically = prevCollidedVertically;
 			} else {
 				this.setMotion(Vector3d.ZERO);
 			}
