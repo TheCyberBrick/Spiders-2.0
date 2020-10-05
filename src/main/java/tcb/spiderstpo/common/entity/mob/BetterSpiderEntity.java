@@ -19,6 +19,7 @@ import net.minecraft.potion.Effects;
 import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.IWorld;
@@ -59,6 +60,11 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	}
 
 	@Override
+	protected ITextComponent getProfessionName() {
+		return EntityType.SPIDER.getName();
+	}
+
+	@Override
 	protected ResourceLocation getLootTable() {
 		return EntityType.SPIDER.getLootTable();
 	}
@@ -77,7 +83,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	protected void updateIdletime() {
 		float f = this.getBrightness();
-		if (f > 0.5F) {
+		if(f > 0.5F) {
 			this.idleTime += 2;
 		}
 	}
@@ -114,7 +120,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	@Override
 	public ItemStack findAmmo(ItemStack shootable) {
-		if (shootable.getItem() instanceof ShootableItem) {
+		if(shootable.getItem() instanceof ShootableItem) {
 			Predicate<ItemStack> predicate = ((ShootableItem) shootable.getItem()).getAmmoPredicate();
 			ItemStack itemstack = ShootableItem.getHeldAmmo(this, predicate);
 			return itemstack.isEmpty() ? new ItemStack(Items.ARROW) : itemstack;
@@ -150,7 +156,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	@Override
 	public void setMotionMultiplier(BlockState state, Vec3d motionMultiplierIn) {
-		if (!state.getBlock().equals(Blocks.COBWEB)) {
+		if(!state.getBlock().equals(Blocks.COBWEB)) {
 			super.setMotionMultiplier(state, motionMultiplierIn);
 		}
 	}
@@ -162,7 +168,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 	@Override
 	public boolean isPotionApplicable(EffectInstance potioneffectIn) {
-		if (potioneffectIn.getPotion() == Effects.POISON) {
+		if(potioneffectIn.getPotion() == Effects.POISON) {
 			net.minecraftforge.event.entity.living.PotionEvent.PotionApplicableEvent event = new net.minecraftforge.event.entity.living.PotionEvent.PotionApplicableEvent(this, potioneffectIn);
 			net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(event);
 			return event.getResult() == net.minecraftforge.eventbus.api.Event.Result.ALLOW;
@@ -174,23 +180,23 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	@Nullable
 	public ILivingEntityData onInitialSpawn(IWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
 		spawnDataIn = super.onInitialSpawn(worldIn, difficultyIn, reason, spawnDataIn, dataTag);
-		if (worldIn.getRandom().nextInt(100) == 0) {
+		if(worldIn.getRandom().nextInt(100) == 0) {
 			SkeletonEntity skeletonentity = EntityType.SKELETON.create(this.world);
 			skeletonentity.setLocationAndAngles(this.getPosX(), this.getPosY(), this.getPosZ(), this.rotationYaw, 0.0F);
 			skeletonentity.onInitialSpawn(worldIn, difficultyIn, reason, null, null);
 			skeletonentity.startRiding(this);
 		}
 
-		if (spawnDataIn == null) {
+		if(spawnDataIn == null) {
 			spawnDataIn = new SpiderEntity.GroupData();
-			if (worldIn.getDifficulty() == Difficulty.HARD && worldIn.getRandom().nextFloat() < 0.1F * difficultyIn.getClampedAdditionalDifficulty()) {
+			if(worldIn.getDifficulty() == Difficulty.HARD && worldIn.getRandom().nextFloat() < 0.1F * difficultyIn.getClampedAdditionalDifficulty()) {
 				((SpiderEntity.GroupData) spawnDataIn).setRandomEffect(worldIn.getRandom());
 			}
 		}
 
-		if (spawnDataIn instanceof SpiderEntity.GroupData) {
+		if(spawnDataIn instanceof SpiderEntity.GroupData) {
 			Effect effect = ((SpiderEntity.GroupData) spawnDataIn).effect;
-			if (effect != null) {
+			if(effect != null) {
 				this.addPotionEffect(new EffectInstance(effect, Integer.MAX_VALUE));
 			}
 		}
@@ -227,7 +233,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 			}*/
 
 			float f = this.attacker.getBrightness();
-			if (f >= 0.5F && this.attacker.getRNG().nextInt(100) == 0) {
+			if(f >= 0.5F && this.attacker.getRNG().nextInt(100) == 0) {
 				this.attacker.setAttackTarget(null);
 				return false;
 			} else {

@@ -20,7 +20,7 @@ public class ClimberMoveController extends MovementController {
 	public void tick() {
 		double speed = this.climber.getMovementSpeed() * this.speed;
 
-		if (this.action == MovementController.Action.MOVE_TO) {
+		if(this.action == MovementController.Action.MOVE_TO) {
 			this.action = MovementController.Action.WAIT;
 
 			AbstractClimberEntity.Orientation orientation = this.climber.getOrientation(1);
@@ -44,7 +44,7 @@ public class ClimberMoveController extends MovementController {
 			double targetDist = targetDir.length();
 			targetDir = targetDir.normalize();
 
-			if (targetDist < 0.0001D) {
+			if(targetDist < 0.0001D) {
 				this.mob.setMoveForward(0);
 			} else {
 				float rx = (float) orientation.localZ.dotProduct(targetDir);
@@ -54,7 +54,7 @@ public class ClimberMoveController extends MovementController {
 
 				this.mob.setAIMoveSpeed((float) speed);
 			}
-		} else if (this.action == MovementController.Action.WAIT) {
+		} else if(this.action == MovementController.Action.WAIT) {
 			this.mob.setMoveForward(0);
 		}
 	}

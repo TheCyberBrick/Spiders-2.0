@@ -31,17 +31,17 @@ public abstract class AbstractClimberRenderer<T extends AbstractClimberEntity, M
 
 		super.render(entity, entityYaw, partialTicks, matrixStackIn, bufferIn, packedLightIn);
 
-		if (this.getRenderManager().isDebugBoundingBox()) {
+		if(this.getRenderManager().isDebugBoundingBox()) {
 			WorldRenderer.drawBoundingBox(matrixStackIn, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(0, 0, 0, 0, 0, 0).grow(0.2f), 1.0f, 1.0f, 1.0f, 1.0f);
 
-			for (int i = 0; i < AbstractClimberEntity.PATHING_TARGETS.size(); i++) {
+			for(int i = 0; i < AbstractClimberEntity.PATHING_TARGETS.size(); i++) {
 				BlockPos pathingTarget = entity.getPathingTarget(i);
-				if (pathingTarget != null) {
+				if(pathingTarget != null) {
 					double rx = entity.prevPosX + (entity.getPosX() - entity.prevPosX) * partialTicks;
 					double ry = entity.prevPosY + (entity.getPosY() - entity.prevPosY) * partialTicks;
 					double rz = entity.prevPosZ + (entity.getPosZ() - entity.prevPosZ) * partialTicks;
 
-					if (i == 0) {
+					if(i == 0) {
 						WorldRenderer.drawBoundingBox(matrixStackIn, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pathingTarget).offset(-rx - rox, -ry - roy, -rz - roz), 1.0f, 0.0f, 0.0f, 1.0f);
 					} else {
 						WorldRenderer.drawBoundingBox(matrixStackIn, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pathingTarget).offset(-rx - rox, -ry - roy, -rz - roz), 1.0f, i / (float) (AbstractClimberEntity.PATHING_TARGETS.size() - 1), 0.0f, 1.0f);

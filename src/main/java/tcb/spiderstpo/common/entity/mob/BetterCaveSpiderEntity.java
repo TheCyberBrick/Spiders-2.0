@@ -5,6 +5,7 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.IWorld;
@@ -29,6 +30,11 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 	}
 
 	@Override
+	protected ITextComponent getProfessionName() {
+		return EntityType.CAVE_SPIDER.getName();
+	}
+
+	@Override
 	public float getVerticalOffset(float partialTicks) {
 		return 0.225f;
 	}
@@ -40,16 +46,16 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 
 	@Override
 	public boolean attackEntityAsMob(Entity entityIn) {
-		if (super.attackEntityAsMob(entityIn)) {
-			if (entityIn instanceof LivingEntity) {
+		if(super.attackEntityAsMob(entityIn)) {
+			if(entityIn instanceof LivingEntity) {
 				int i = 0;
-				if (this.world.getDifficulty() == Difficulty.NORMAL) {
+				if(this.world.getDifficulty() == Difficulty.NORMAL) {
 					i = 7;
-				} else if (this.world.getDifficulty() == Difficulty.HARD) {
+				} else if(this.world.getDifficulty() == Difficulty.HARD) {
 					i = 15;
 				}
 
-				if (i > 0) {
+				if(i > 0) {
 					((LivingEntity) entityIn).addPotionEffect(new EffectInstance(Effects.POISON, i * 20, 0));
 				}
 			}

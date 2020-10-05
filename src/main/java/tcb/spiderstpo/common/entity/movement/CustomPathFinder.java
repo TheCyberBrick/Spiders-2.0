@@ -68,37 +68,37 @@ public class CustomPathFinder extends PathFinder {
 
 		while (!this.path.isPathEmpty()) {
 			++i;
-			if (i >= j) {
+			if(i >= j) {
 				break;
 			}
 
 			PathPoint pathpoint = this.path.dequeue();
 			pathpoint.visited = true;
 
-			for (FlaggedPathPoint flaggedpathpoint : checkpoints) {
-				if (pathpoint.func_224757_c(flaggedpathpoint) <= (float) checkpointRange) {
+			for(FlaggedPathPoint flaggedpathpoint : checkpoints) {
+				if(pathpoint.func_224757_c(flaggedpathpoint) <= (float) checkpointRange) {
 					flaggedpathpoint.func_224764_e();
 					crossedCheckpoints.add(flaggedpathpoint);
 				}
 			}
 
-			if (!crossedCheckpoints.isEmpty()) {
+			if(!crossedCheckpoints.isEmpty()) {
 				break;
 			}
 
-			if (!(pathpoint.distanceTo(start) >= maxDistance)) {
+			if(!(pathpoint.distanceTo(start) >= maxDistance)) {
 				int k = this.nodeProcessor.func_222859_a(this.pathOptions, pathpoint);
 
-				for (int l = 0; l < k; ++l) {
+				for(int l = 0; l < k; ++l) {
 					PathPoint pathpoint1 = this.pathOptions[l];
 					float f = pathpoint.distanceTo(pathpoint1);
 					pathpoint1.field_222861_j = pathpoint.field_222861_j + f;
 					float f1 = pathpoint.totalPathDistance + f + pathpoint1.costMalus;
-					if (pathpoint1.field_222861_j < maxDistance && (!pathpoint1.isAssigned() || f1 < pathpoint1.totalPathDistance)) {
+					if(pathpoint1.field_222861_j < maxDistance && (!pathpoint1.isAssigned() || f1 < pathpoint1.totalPathDistance)) {
 						pathpoint1.previous = pathpoint;
 						pathpoint1.totalPathDistance = f1;
 						pathpoint1.distanceToNext = this.func_224776_a(pathpoint1, checkpoints) * 1.5F;
-						if (pathpoint1.isAssigned()) {
+						if(pathpoint1.isAssigned()) {
 							this.path.changeDistance(pathpoint1, pathpoint1.totalPathDistance + pathpoint1.distanceToNext);
 						} else {
 							pathpoint1.distanceToTarget = pathpoint1.totalPathDistance + pathpoint1.distanceToNext;
@@ -110,18 +110,18 @@ public class CustomPathFinder extends PathFinder {
 		}
 
 		Optional<Path> path;
-		if (!crossedCheckpoints.isEmpty()) {
+		if(!crossedCheckpoints.isEmpty()) {
 			path = crossedCheckpoints.stream()
-				.map((mappedCheckpoint) -> {
-					return this.func_224780_a(mappedCheckpoint.func_224763_d(), mappedCheckpoints.get(mappedCheckpoint), true);
-				})
-				.min(Comparator.comparingInt(Path::getCurrentPathLength));
+					.map((mappedCheckpoint) -> {
+						return this.func_224780_a(mappedCheckpoint.func_224763_d(), mappedCheckpoints.get(mappedCheckpoint), true);
+					})
+					.min(Comparator.comparingInt(Path::getCurrentPathLength));
 		} else {
 			path = checkpoints.stream()
-				.map((mappedCheckpoint) -> {
-					return this.func_224780_a(mappedCheckpoint.func_224763_d(), mappedCheckpoints.get(mappedCheckpoint), false);
-				})
-				.min(Comparator.comparingDouble(Path::func_224769_l).thenComparingInt(Path::getCurrentPathLength));
+					.map((mappedCheckpoint) -> {
+						return this.func_224780_a(mappedCheckpoint.func_224763_d(), mappedCheckpoints.get(mappedCheckpoint), false);
+					})
+					.min(Comparator.comparingDouble(Path::func_224769_l).thenComparingInt(Path::getCurrentPathLength));
 		}
 		return !path.isPresent() ? null : path.get();
 	}
@@ -131,7 +131,7 @@ public class CustomPathFinder extends PathFinder {
 	private float func_224776_a(PathPoint p_224776_1_, Set<FlaggedPathPoint> p_224776_2_) {
 		float f = Float.MAX_VALUE;
 
-		for (FlaggedPathPoint flaggedpathpoint : p_224776_2_) {
+		for(FlaggedPathPoint flaggedpathpoint : p_224776_2_) {
 			float f1 = p_224776_1_.distanceTo(flaggedpathpoint);
 			flaggedpathpoint.func_224761_a(f1, p_224776_1_);
 			f = Math.min(f1, f);
@@ -162,13 +162,13 @@ public class CustomPathFinder extends PathFinder {
 	public Path findPath(IBlockAccess worldIn, MobEntity MobEntityIn, Entity targetEntity, float maxDistance) {
 		return this.findPath(worldIn, MobEntityIn, targetEntity.posX, targetEntity.getEntityBoundingBox().minY, targetEntity.posZ, maxDistance);
 	}
-
+	
 	@Override
 	@Nullable
 	public Path findPath(IBlockAccess worldIn, MobEntity MobEntityIn, BlockPos targetPos, float maxDistance) {
 		return this.findPath(worldIn, MobEntityIn, (double)((float)targetPos.getX() + 0.5F), (double)((float)targetPos.getY() + 0.5F), (double)((float)targetPos.getZ() + 0.5F), maxDistance);
 	}
-
+	
 	@Nullable
 	private Path findPath(IBlockAccess worldIn, MobEntity MobEntityIn, double x, double y, double z, float maxDistance) {
 		this.path.clearPath();
@@ -179,7 +179,7 @@ public class CustomPathFinder extends PathFinder {
 		this.nodeProcessor.postProcess();
 		return path;
 	}
-
+	
 	@Nullable
 	private Path findPath(PathPoint startPathPoint, PathPoint targetPathPoint, float maxDistance) {
 		startPathPoint.totalPathDistance = 0.0F;
@@ -188,48 +188,48 @@ public class CustomPathFinder extends PathFinder {
 		this.path.clearPath();
 		this.path.addPoint(startPathPoint);
 		PathPoint finalPathPoint = startPathPoint;
-
+	
 		int expansions = 0;
-
+	
 		while(!this.path.isPathEmpty()) {
 			++expansions;
-
+	
 			if(expansions >= this.maxExpansions) {
 				break;
 			}
-
+	
 			PathPoint openPathPoint = this.path.dequeue();
-
+	
 			if(openPathPoint.equals(targetPathPoint)) {
 				finalPathPoint = targetPathPoint;
 				break;
 			}
-
+	
 			if(this.heuristic.compute(openPathPoint, targetPathPoint, true) < this.heuristic.compute(finalPathPoint, targetPathPoint, true)) {
 				finalPathPoint = openPathPoint;
 			}
-
+	
 			openPathPoint.visited = true;
 			int numOptions = this.nodeProcessor.findPathOptions(this.pathOptions, openPathPoint, targetPathPoint, maxDistance);
-
+	
 			for(int i = 0; i < numOptions; ++i) {
 				PathPoint successorPathPoint = this.pathOptions[i];
-
+	
 				float costHeuristic = this.heuristic.compute(openPathPoint, successorPathPoint, false);
-
+	
 				//distanceFromOrigin corresponds to the total path cost of the evaluation function
 				successorPathPoint.distanceFromOrigin = openPathPoint.distanceFromOrigin + costHeuristic;
 				successorPathPoint.cost = costHeuristic + successorPathPoint.costMalus;
-
+	
 				float totalSuccessorPathCost = openPathPoint.totalPathDistance + successorPathPoint.cost;
-
+	
 				if(successorPathPoint.distanceFromOrigin < maxDistance && (!successorPathPoint.isAssigned() || totalSuccessorPathCost < successorPathPoint.totalPathDistance)) {
 					successorPathPoint.previous = openPathPoint;
 					successorPathPoint.totalPathDistance = totalSuccessorPathCost;
-
+	
 					//distanceToNext corresponds to the heuristic part of the evaluation function
 					successorPathPoint.distanceToNext = this.heuristic.compute(successorPathPoint, targetPathPoint, true) + successorPathPoint.costMalus;
-
+	
 					if(successorPathPoint.isAssigned()) {
 						this.path.changeDistance(successorPathPoint, successorPathPoint.totalPathDistance + successorPathPoint.distanceToNext);
 					} else {
@@ -240,7 +240,7 @@ public class CustomPathFinder extends PathFinder {
 				}
 			}
 		}
-
+	
 		if(finalPathPoint == startPathPoint) {
 			return null;
 		} else {
@@ -248,23 +248,23 @@ public class CustomPathFinder extends PathFinder {
 			return path;
 		}
 	}
-
+	
 	private Path createPath(PathPoint start, PathPoint end) {
 		int pathLength = 1;
-
+	
 		for(PathPoint pathpoint = end; pathpoint.previous != null; pathpoint = pathpoint.previous) {
 			++pathLength;
 		}
-
+	
 		PathPoint[] path = new PathPoint[pathLength];
 		PathPoint currentPathPoint = end;
 		--pathLength;
-
+	
 		for(path[pathLength] = end; currentPathPoint.previous != null; path[pathLength] = currentPathPoint) {
 			currentPathPoint = currentPathPoint.previous;
 			--pathLength;
 		}
-
+	
 		return new Path(path);
 	}*/
 }
