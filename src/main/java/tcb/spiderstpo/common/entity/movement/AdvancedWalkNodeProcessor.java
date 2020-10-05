@@ -572,6 +572,8 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				}
 
 				if(nodeType == PathNodeType.OPEN) {
+					directPathPoint = null;
+					
 					AxisAlignedBB checkAabb = new AxisAlignedBB((double)x - halfWidth + 0.5D, (double)y + 0.001D, (double)z - halfWidth + 0.5D, (double)x + halfWidth + 0.5D, (double)((float)y + this.entity.getHeight()), (double)z + halfWidth + 0.5D);
 
 					if(this.checkAabbCollision(checkAabb)) {
@@ -599,11 +601,11 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 
 					int fallDistance = 0;
 					int preFallY = y;
-
+					
 					while(y > 0 && nodeType == PathNodeType.OPEN) {
 						--y;
 
-						if(fallDistance++ >= this.entity.getMaxFallHeight() || y == 0) {
+						if(fallDistance++ >= Math.max(1, this.entity.getMaxFallHeight()) /*at least one chance is required for swimming*/ || y == 0) {
 							cancelFallDown = true;
 							break;
 						}
@@ -611,7 +613,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 						nodeType = this.getPathNodeTypeCached(this.entity, x, y, z);
 						malus = this.entity.getPathPriority(nodeType);
 
-						if(nodeType != PathNodeType.OPEN && malus >= 0.0F) {
+						if(((this.entity.getMaxFallHeight() > 0 && nodeType != PathNodeType.OPEN) || nodeType == PathNodeType.WATER || nodeType == PathNodeType.LAVA) && malus >= 0.0F) {
 							fallPathPoint = this.openPoint(x, y, z);
 							fallPathPoint.nodeType = nodeType;
 							fallPathPoint.costMalus = Math.max(fallPathPoint.costMalus, malus);

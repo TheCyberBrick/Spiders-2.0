@@ -15,6 +15,7 @@ import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.text.ITextComponent;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.IServerWorld;
@@ -35,10 +36,15 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 	}
 
 	@Override
+	protected ITextComponent getProfessionName() {
+		return EntityType.CAVE_SPIDER.getName();
+	}
+
+	@Override
 	public float getVerticalOffset(float partialTicks) {
 		return 0.225f;
 	}
-	
+
 	@Override
 	protected ResourceLocation getLootTable() {
 		return EntityType.CAVE_SPIDER.getLootTable();
