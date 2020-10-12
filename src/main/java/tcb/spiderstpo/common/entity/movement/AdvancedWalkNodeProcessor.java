@@ -189,7 +189,6 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 		return false;
 	}
 
-	//public int findPathOptions(PathPoint[] pathOptions, PathPoint currentPoint, PathPoint targetPoint, float maxDistance)
 	@Override
 	public int func_222859_a(PathPoint[] pathOptions, PathPoint currentPoint) {
 		int openedNodeCount = 0;
@@ -282,7 +281,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 			boolean foundDiagonal = false;
 
 			for(int k = 0; k < pathsNXNZ.length; k++) {
-				if(isSuitablePoint(pathsNX, pathsNZ, pathsNXNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+				if(isSuitablePoint(pathsNX, currentPoint.x - 1, currentPoint.y, currentPoint.z, pathsNZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsNXNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 					pathOptions[openedNodeCount++] = pathsNXNZ[k];
 					foundDiagonal = true;
 				}
@@ -292,7 +291,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				pathsNXNZ = this.getSafePoints(currentPoint.x - 1, currentPoint.y, currentPoint.z - this.entitySizeZ, stepHeight, height, Direction.NORTH, this.checkObstructions);
 
 				for(int k = 0; k < pathsNXNZ.length; k++) {
-					if(isSuitablePoint(pathsNX, pathsNZ, pathsNXNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsNX, currentPoint.x - 1, currentPoint.y, currentPoint.z, pathsNZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsNXNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsNXNZ[k];
 					}
 				}
@@ -303,7 +302,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 			PathPoint[] pathsPXNZ = this.getSafePoints(currentPoint.x + 1, currentPoint.y, currentPoint.z - 1, stepHeight, height, Direction.NORTH, this.checkObstructions);
 
 			for(int k = 0; k < pathsPXNZ.length; k++) {
-				if(isSuitablePoint(pathsPX, pathsNZ, pathsPXNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+				if(isSuitablePoint(pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsNZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsPXNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 					pathOptions[openedNodeCount++] = pathsPXNZ[k];
 				}
 			}
@@ -313,7 +312,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 			PathPoint[] pathsNXPZ = this.getSafePoints(currentPoint.x - 1, currentPoint.y, currentPoint.z + 1, stepHeight, height, Direction.SOUTH, this.checkObstructions);
 
 			for(int k = 0; k < pathsNXPZ.length; k++) {
-				if(isSuitablePoint(pathsNX, pathsPZ, pathsNXPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+				if(isSuitablePoint(pathsNX, currentPoint.x - 1, currentPoint.y, currentPoint.z, pathsPZ, currentPoint.x, currentPoint.y, currentPoint.z + 1, pathsNXPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 					pathOptions[openedNodeCount++] = pathsNXPZ[k];
 				}
 			}
@@ -325,7 +324,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 			boolean foundDiagonal = false;
 
 			for(int k = 0; k < pathsPXPZ.length; k++) {
-				if(isSuitablePoint(pathsPX, pathsPZ, pathsPXPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+				if(isSuitablePoint(pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsPZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsPXPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 					pathOptions[openedNodeCount++] = pathsPXPZ[k];
 					foundDiagonal = true;
 				}
@@ -335,7 +334,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				pathsPXPZ = this.getSafePoints(currentPoint.x + 1, currentPoint.y, currentPoint.z + this.entitySizeZ, stepHeight, height, Direction.SOUTH, this.checkObstructions);
 
 				for(int k = 0; k < pathsPXPZ.length; k++) {
-					if(isSuitablePoint(pathsPX, pathsPZ, pathsPXPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsPZ, currentPoint.x, currentPoint.y, currentPoint.z + 1, pathsPXPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsPXPZ[k];
 					}
 				}
@@ -352,7 +351,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				boolean foundDiagonal = false;
 
 				for(int k = 0; k < pathsNYNX.length; k++) {
-					if(isSuitablePoint(pathsNY, pathsNX, pathsNYNX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsNY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsNX, currentPoint.x - 1, currentPoint.y, currentPoint.z, pathsNYNX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsNYNX[k];
 						foundDiagonal = true;
 					}
@@ -362,7 +361,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 					pathsNYNX = this.getSafePoints(currentPoint.x - 1, currentPoint.y - this.entitySizeY, currentPoint.z, stepHeight, height, Direction.WEST, this.checkObstructions);
 
 					for(int k = 0; k < pathsNYNX.length; k++) {
-						if(isSuitablePoint(pathsNY, pathsNX, pathsNYNX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+						if(isSuitablePoint(pathsNY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsNX, currentPoint.x - 1, currentPoint.y, currentPoint.z, pathsNYNX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 							pathOptions[openedNodeCount++] = pathsNYNX[k];
 						}
 					}
@@ -373,7 +372,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				PathPoint[] pathsNYPX = this.getSafePoints(currentPoint.x + 1, currentPoint.y - 1, currentPoint.z, stepHeight, height, Direction.EAST, this.checkObstructions);
 
 				for(int k = 0; k < pathsNYPX.length; k++) {
-					if(isSuitablePoint(pathsNY, pathsPX, pathsNYPX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsNY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsNYPX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsNYPX[k];
 					}
 				}
@@ -385,7 +384,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				boolean foundDiagonal = false;
 
 				for(int k = 0; k < pathsNYNZ.length; k++) {
-					if(isSuitablePoint(pathsNY, pathsNZ, pathsNYNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsNY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsNZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsNYNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsNYNZ[k];
 						foundDiagonal = true;
 					}
@@ -395,7 +394,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 					pathsNYNZ = this.getSafePoints(currentPoint.x, currentPoint.y - 1, currentPoint.z - this.entitySizeZ, stepHeight, height, Direction.NORTH, this.checkObstructions);
 
 					for(int k = 0; k < pathsNYNZ.length; k++) {
-						if(isSuitablePoint(pathsNY, pathsNZ, pathsNYNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+						if(isSuitablePoint(pathsNY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsNZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsNYNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 							pathOptions[openedNodeCount++] = pathsNYNZ[k];
 						}
 					}
@@ -406,7 +405,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				PathPoint[] pathsNYPZ = this.getSafePoints(currentPoint.x, currentPoint.y - 1, currentPoint.z + 1, stepHeight, height, Direction.SOUTH, this.checkObstructions);
 
 				for(int k = 0; k < pathsNYPZ.length; k++) {
-					if(isSuitablePoint(pathsNY, pathsPZ, pathsNYPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsNY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsPZ, currentPoint.x, currentPoint.y, currentPoint.z + 1, pathsNYPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsNYPZ[k];
 					}
 				}
@@ -416,7 +415,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				PathPoint[] pathsPYNX = this.getSafePoints(currentPoint.x - 1, currentPoint.y + 1, currentPoint.z, stepHeight, height, Direction.WEST, this.checkObstructions);
 
 				for(int k = 0; k < pathsPYNX.length; k++) {
-					if(isSuitablePoint(pathsPY, pathsNZ, pathsPYNX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsNZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsPYNX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsPYNX[k];
 					}
 				}
@@ -428,7 +427,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				boolean foundDiagonal = false;
 
 				for(int k = 0; k < pathsPYPX.length; k++) {
-					if(isSuitablePoint(pathsPY, pathsPX, pathsPYPX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y + 1, currentPoint.z, pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsPYPX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsPYPX[k];
 						foundDiagonal = true;
 					}
@@ -438,7 +437,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 					pathsPYPX = this.getSafePoints(currentPoint.x + 1, currentPoint.y + this.entitySizeY, currentPoint.z, stepHeight, height, Direction.EAST, this.checkObstructions);
 
 					for(int k = 0; k < pathsPYPX.length; k++) {
-						if(isSuitablePoint(pathsPY, pathsPX, pathsPYPX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+						if(isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsPYPX[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 							pathOptions[openedNodeCount++] = pathsPYPX[k];
 						}
 					}
@@ -449,7 +448,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				PathPoint[] pathsPYNZ = this.getSafePoints(currentPoint.x, currentPoint.y + 1, currentPoint.z - 1, stepHeight, height, Direction.NORTH, this.checkObstructions);
 
 				for(int k = 0; k < pathsPYNZ.length; k++) {
-					if(isSuitablePoint(pathsPY, pathsNZ, pathsPYNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y + 1, currentPoint.z, pathsNZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsPYNZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsPYNZ[k];
 					}
 				}
@@ -461,7 +460,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				boolean foundDiagonal = false;
 
 				for(int k = 0; k < pathsPYPZ.length; k++) {
-					if(isSuitablePoint(pathsPY, pathsPZ, pathsPYPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+					if(isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y + 1, currentPoint.z, pathsPZ, currentPoint.x, currentPoint.y, currentPoint.z + 1, pathsPYPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 						pathOptions[openedNodeCount++] = pathsPYPZ[k];
 						foundDiagonal = true;
 					}
@@ -471,7 +470,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 					pathsPYPZ = this.getSafePoints(currentPoint.x, currentPoint.y + 1, currentPoint.z + this.entitySizeZ, stepHeight, height, Direction.SOUTH, this.checkObstructions);
 
 					for(int k = 0; k < pathsPYPZ.length; k++) {
-						if(isSuitablePoint(pathsPY, pathsPZ, pathsPYPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
+						if(isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y + 1, currentPoint.z, pathsPZ, currentPoint.x, currentPoint.y, currentPoint.z + 1, pathsPYPZ[k], this.checkObstructions, fitsThroughPoles, allowOuterCorners)) {
 							pathOptions[openedNodeCount++] = pathsPYPZ[k];
 						}
 					}
@@ -486,7 +485,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 		return newPoint != null && !newPoint.visited && (allowObstructions || newPoint.costMalus >= 0.0F || currentPoint.costMalus < 0.0F);
 	}
 
-	private static boolean isSuitablePoint(@Nullable PathPoint[] newPoints1, @Nullable PathPoint[] newPoints2, @Nullable PathPoint newPointDiagonal, boolean allowObstructions, boolean fitsThroughPoles, boolean allowOuterCorners) {
+	private boolean isSuitablePoint(@Nullable PathPoint[] newPoints1, int np1x, int np1y, int np1z, @Nullable PathPoint[] newPoints2, int np2x, int np2y, int np2z, @Nullable PathPoint newPointDiagonal, boolean allowObstructions, boolean fitsThroughPoles, boolean allowOuterCorners) {
 		if(!allowOuterCorners) {
 			if(newPointDiagonal != null && !newPointDiagonal.visited && newPoints2 != null && newPoints2.length > 0 && (newPoints2[0] != null || (newPoints2.length > 1 && newPoints2[1] != null)) && newPoints1 != null && newPoints1.length > 0 && (newPoints1[0] != null || (newPoints1.length > 1 && newPoints1[1] != null))) {
 				if((newPoints1[0] == null || newPoints1[0].nodeType != PathNodeType.WALKABLE_DOOR) && (newPoints2[0] == null || newPoints2[0].nodeType != PathNodeType.WALKABLE_DOOR) && newPointDiagonal.nodeType != PathNodeType.WALKABLE_DOOR) {
@@ -504,10 +503,31 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 			}
 		} else {
 			if(newPointDiagonal != null && !newPointDiagonal.visited) {
-				return (allowObstructions || newPointDiagonal.costMalus >= 0.0F) && (
-						((newPoints2 == null || (newPoints2.length > 0 && (newPoints2[0] == null || (allowObstructions || newPoints2[0].costMalus >= 0.0F || newPoints2[0].nodeType == PathNodeType.OPEN)))) || (newPoints2 == null || (newPoints2.length > 1 && (newPoints2[1] == null || (allowObstructions || newPoints2[1].costMalus >= 0.0F || newPoints2[1].nodeType == PathNodeType.OPEN))))) &&
-						((newPoints1 == null || (newPoints1.length > 0 && (newPoints1[0] == null || (allowObstructions || newPoints1[0].costMalus >= 0.0F || newPoints1[0].nodeType == PathNodeType.OPEN)))) || (newPoints1 == null || (newPoints1.length > 1 && (newPoints1[1] == null || (allowObstructions || newPoints1[1].costMalus >= 0.0F || newPoints1[1].nodeType == PathNodeType.OPEN)))))
-						);
+				PathPoint newPoint21 = newPoints2 != null && newPoints2.length >= 1 ? newPoints2[0] : null;
+				PathPoint newPoint22 = newPoints2 != null && newPoints2.length >= 2 ? newPoints2[1] : null;
+				PathPoint newPoint11 = newPoints1 != null && newPoints1.length >= 1 ? newPoints1[0] : null;
+				PathPoint newPoint12 = newPoints1 != null && newPoints1.length >= 2 ? newPoints1[1] : null;
+				
+				if(allowObstructions || (newPointDiagonal.costMalus >= 0.0f && (
+						(newPoint21 != null && (newPoint21.costMalus >= 0.0f || newPoint21.nodeType == PathNodeType.OPEN)) ||
+						(newPoint22 != null && (newPoint22.costMalus >= 0.0f || newPoint22.nodeType == PathNodeType.OPEN)) ||
+						(newPoint11 != null && (newPoint11.costMalus >= 0.0f || newPoint11.nodeType == PathNodeType.OPEN)) ||
+						(newPoint12 != null && (newPoint12.costMalus >= 0.0f || newPoint12.nodeType == PathNodeType.OPEN))
+						))) {
+					return true;
+				}
+				
+				PathNodeType pathNodeType2 = this.getPathNodeTypeCached(this.entity, np2x, np2y, np2z);
+				if(pathNodeType2 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WALKABLE) {
+					return true;
+				}
+				
+				PathNodeType pathNodeType1 = this.getPathNodeTypeCached(this.entity, np1x, np1y, np1z);
+				if(pathNodeType1 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WALKABLE) {
+					return true;
+				}
+				
+				return false;
 			} else {
 				return false;
 			}
@@ -573,7 +593,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 
 				if(nodeType == PathNodeType.OPEN) {
 					directPathPoint = null;
-					
+
 					AxisAlignedBB checkAabb = new AxisAlignedBB((double)x - halfWidth + 0.5D, (double)y + 0.001D, (double)z - halfWidth + 0.5D, (double)x + halfWidth + 0.5D, (double)((float)y + this.entity.getHeight()), (double)z + halfWidth + 0.5D);
 
 					if(this.checkAabbCollision(checkAabb)) {
@@ -601,7 +621,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 
 					int fallDistance = 0;
 					int preFallY = y;
-					
+
 					while(y > 0 && nodeType == PathNodeType.OPEN) {
 						--y;
 
@@ -681,6 +701,10 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 				return result;
 			}
 		}
+	}
+
+	private PathNodeType getPathNodeTypeCached(MobEntity entitylivingIn, PathPoint point) {
+		return this.getPathNodeType(this.blockaccess, point.x, point.y, point.z);
 	}
 
 	private PathNodeType getPathNodeTypeCached(MobEntity entitylivingIn, BlockPos pos) {

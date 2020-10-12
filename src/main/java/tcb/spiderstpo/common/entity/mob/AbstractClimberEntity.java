@@ -39,27 +39,16 @@ import net.minecraft.world.server.ServerWorld;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
 import tcb.spiderstpo.common.Config;
 import tcb.spiderstpo.common.Matrix4f;
-import tcb.spiderstpo.common.SpiderMod;
 import tcb.spiderstpo.common.entity.movement.AdvancedClimberPathNavigator;
 import tcb.spiderstpo.common.entity.movement.AdvancedGroundPathNavigator;
 import tcb.spiderstpo.common.entity.movement.ClimberLookController;
 import tcb.spiderstpo.common.entity.movement.ClimberMoveController;
 import tcb.spiderstpo.common.entity.movement.IAdvancedPathFindingEntity;
 
-
 public abstract class AbstractClimberEntity extends CreatureEntity implements IAdvancedPathFindingEntity {
 	public boolean pathFinderDebugPreview;
-	
-	public static final ImmutableList<DataParameter<Optional<BlockPos>>> PATHING_TARGETS = ImmutableList.of(
-			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
-			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
-			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
-			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
-			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
-			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
-			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS),
-			EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS)
-			);
+
+	public static final ImmutableList<DataParameter<Optional<BlockPos>>> PATHING_TARGETS = ImmutableList.of(EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS), EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS), EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS), EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS), EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS), EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS), EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS), EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.OPTIONAL_BLOCK_POS));
 
 	public static final DataParameter<Rotations> ROTATION_BODY = EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.ROTATIONS);
 	public static final DataParameter<Rotations> ROTATION_HEAD = EntityDataManager.createKey(AbstractClimberEntity.class, DataSerializers.ROTATIONS);
@@ -104,7 +93,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		super.registerData();
 
 		this.pathFinderDebugPreview = Config.PATH_FINDER_DEBUG_PREVIEW.get();
-		
+
 		if(this.pathFinderDebugPreview) {
 			for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 				this.dataManager.register(pathingTarget, Optional.empty());
@@ -332,8 +321,8 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		public Pair<Float, Float> getRotation(Vector3d global) {
 			Vector3d local = this.getLocal(global);
 
-			float yaw = (float)Math.toDegrees(Math.atan2(local.x, local.z)) + 180.0f;
-			float pitch = (float)-Math.toDegrees(Math.atan2(local.y, MathHelper.sqrt(local.x * local.x + local.z * local.z)));
+			float yaw = (float) Math.toDegrees(Math.atan2(local.x, local.z)) + 180.0f;
+			float pitch = (float) -Math.toDegrees(Math.atan2(local.y, MathHelper.sqrt(local.x * local.x + local.z * local.z)));
 
 			return Pair.of(yaw, pitch);
 		}
@@ -346,27 +335,27 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		Vector3d localY = new Vector3d(0, 1, 0);
 		Vector3d localX = new Vector3d(1, 0, 0);
 
-		float componentZ = (float)localZ.dotProduct(orientationNormal);
+		float componentZ = (float) localZ.dotProduct(orientationNormal);
 		float componentY;
-		float componentX = (float)localX.dotProduct(orientationNormal);
+		float componentX = (float) localX.dotProduct(orientationNormal);
 
-		float yaw = (float)Math.toDegrees(Math.atan2(componentX, componentZ));
+		float yaw = (float) Math.toDegrees(Math.atan2(componentX, componentZ));
 
 		localZ = new Vector3d(Math.sin(Math.toRadians(yaw)), 0, Math.cos(Math.toRadians(yaw)));
 		localY = new Vector3d(0, 1, 0);
 		localX = new Vector3d(Math.sin(Math.toRadians(yaw - 90)), 0, Math.cos(Math.toRadians(yaw - 90)));
 
-		componentZ = (float)localZ.dotProduct(orientationNormal);
-		componentY = (float)localY.dotProduct(orientationNormal);
-		componentX = (float)localX.dotProduct(orientationNormal);
+		componentZ = (float) localZ.dotProduct(orientationNormal);
+		componentY = (float) localY.dotProduct(orientationNormal);
+		componentX = (float) localX.dotProduct(orientationNormal);
 
-		float pitch = (float)Math.toDegrees(Math.atan2(MathHelper.sqrt(componentX * componentX + componentZ * componentZ), componentY));
+		float pitch = (float) Math.toDegrees(Math.atan2(MathHelper.sqrt(componentX * componentX + componentZ * componentZ), componentY));
 
 		Matrix4f m = new Matrix4f();
 
-		m.multiply(new Matrix4f((float)Math.toRadians(yaw), 0, 1, 0));
-		m.multiply(new Matrix4f((float)Math.toRadians(pitch), 1, 0, 0));
-		m.multiply(new Matrix4f((float)Math.toRadians((float)Math.signum(0.5f - componentY - componentZ - componentX) * yaw), 0, 1, 0));
+		m.multiply(new Matrix4f((float) Math.toRadians(yaw), 0, 1, 0));
+		m.multiply(new Matrix4f((float) Math.toRadians(pitch), 1, 0, 0));
+		m.multiply(new Matrix4f((float) Math.toRadians((float) Math.signum(0.5f - componentY - componentZ - componentX) * yaw), 0, 1, 0));
 
 		localZ = m.multiply(new Vector3d(0, 0, -1));
 		localY = m.multiply(new Vector3d(0, 1, 0));
@@ -388,15 +377,15 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 		if(!this.world.isRemote && this.world instanceof ServerWorld) {
 			EntityTracker entityTracker = ((ServerWorld) this.world).getChunkProvider().chunkManager.entities.get(this.getEntityId());
-			
+
 			//Prevent premature syncing of position causing overly smoothed movement
 			if(entityTracker != null && entityTracker.entry.updateCounter % entityTracker.entry.updateFrequency == 0) {
 				Vector3d look = this.getOrientation(1).getDirection(this.rotationYaw, this.rotationPitch);
 				this.dataManager.set(ROTATION_BODY, new Rotations((float) look.x, (float) look.y, (float) look.z));
-	
+
 				look = this.getOrientation(1).getDirection(this.rotationYawHead, 0.0f);
 				this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
-	
+
 				if(this.pathFinderDebugPreview) {
 					Path path = this.getNavigator().getPath();
 					if(path != null) {
@@ -429,7 +418,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 	}
 
 	public float getVerticalOffset(float partialTicks) {
-		return 0.45f;
+		return /*0.45f*/0.075f;
 	}
 
 	protected void updateOffsetsAndOrientation() {
@@ -445,12 +434,12 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		if(!this.isTravelingInFluid && this.onGround && this.getRidingEntity() == null) {
 			Vector3d p = this.getPositionVec();
 
-			Vector3d s = p.add(0, this.getHeight() / 2, 0);
+			Vector3d s = p.add(0, this.getHeight() * 0.5f, 0);
 			AxisAlignedBB inclusionBox = new AxisAlignedBB(s.x, s.y, s.z, s.x, s.y, s.z).grow(this.collisionsInclusionRange);
 
 			List<AxisAlignedBB> boxes = this.world.getCollisionShapes(this, inclusionBox).flatMap(shape -> shape.toBoundingBoxList().stream()).collect(Collectors.toList());
 
-			Pair<Vector3d, Vector3d> attachmentPoint = CollisionSmoothingUtil.findClosestPoint(boxes, this.collisionsSmoothingRange, 1.0f, 0.005f, 20, 0.05f, s);
+			Pair<Vector3d, Vector3d> attachmentPoint = CollisionSmoothingUtil.findClosestPoint(boxes, s, this.orientationNormal.scale(-1), this.collisionsSmoothingRange, 1.0f, 0.001f, 20, 0.05f, s);
 
 			if(attachmentPoint != null) {
 				isAttached = true;
@@ -473,7 +462,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		this.stickingOffsetY = baseStickingOffsetY + (this.attachedStickingOffsetY - baseStickingOffsetY) * attachmentBlend;
 		this.stickingOffsetZ = baseStickingOffsetZ + (this.attachedStickingOffsetZ - baseStickingOffsetZ) * attachmentBlend;
 		this.orientationNormal = baseOrientationNormal.add(this.attachedOrientationNormal.subtract(baseOrientationNormal).scale(attachmentBlend)).normalize();
-
+		
 		if(!isAttached) {
 			this.attachedTicks = Math.max(0, this.attachedTicks - 1);
 		} else {
@@ -523,12 +512,12 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 	@Override
 	public void setPositionAndRotationDirect(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
-		super.setPositionAndRotationDirect(x, y, z, (float)this.interpTargetYaw, (float)this.interpTargetPitch, posRotationIncrements, teleport);
+		super.setPositionAndRotationDirect(x, y, z, (float) this.interpTargetYaw, (float) this.interpTargetPitch, posRotationIncrements, teleport);
 	}
 
 	@Override
 	public void setHeadRotation(float yaw, int rotationIncrements) {
-		super.setHeadRotation((float)this.interpTargetHeadYaw, rotationIncrements);
+		super.setHeadRotation((float) this.interpTargetHeadYaw, rotationIncrements);
 	}
 
 	@Override
@@ -671,6 +660,8 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 			}
 		}
 
+		this.setMotion(this.getMotion().add(stickingForce));
+		
 		double px = this.getPosX();
 		double py = this.getPosY();
 		double pz = this.getPosZ();
@@ -681,8 +672,6 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		this.prevAttachedSides = this.attachedSides;
 		this.attachedSides = new Vector3d(Math.abs(this.getPosX() - px - motion.x) > 0.001D ? -Math.signum(motion.x) : 0, Math.abs(this.getPosY() - py - motion.y) > 0.001D ? -Math.signum(motion.y) : 0, Math.abs(this.getPosZ() - pz - motion.z) > 0.001D ? -Math.signum(motion.z) : 0);
 
-		this.setMotion(this.getMotion().add(stickingForce));
-		
 		float slipperiness = 0.91f;
 
 		if(this.onGround) {
@@ -697,11 +686,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		Vector3d orthogonalMotion = upVector.scale(upVector.dotProduct(motion));
 		Vector3d tangentialMotion = motion.subtract(orthogonalMotion);
 
-		this.setMotion(
-				tangentialMotion.x * slipperiness + orthogonalMotion.x * 0.98f, 
-				tangentialMotion.y * slipperiness + orthogonalMotion.y * 0.98f, 
-				tangentialMotion.z * slipperiness + orthogonalMotion.z * 0.98f
-				);
+		this.setMotion(tangentialMotion.x * slipperiness + orthogonalMotion.x * 0.98f, tangentialMotion.y * slipperiness + orthogonalMotion.y * 0.98f, tangentialMotion.z * slipperiness + orthogonalMotion.z * 0.98f);
 
 		boolean detachedX = this.attachedSides.x != this.prevAttachedSides.x && Math.abs(this.attachedSides.x) < 0.001D;
 		boolean detachedY = this.attachedSides.y != this.prevAttachedSides.y && Math.abs(this.attachedSides.y) < 0.001D;
@@ -714,7 +699,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 			boolean prevOnGround = this.onGround;
 			boolean prevCollidedHorizontally = this.collidedHorizontally;
 			boolean prevCollidedVertically = this.collidedVertically;
-			
+
 			//Offset so that AABB is moved above the new surface
 			this.move(MoverType.SELF, new Vector3d(detachedX ? -this.prevAttachedSides.x * 0.25f : 0, detachedY ? -this.prevAttachedSides.y * 0.25f : 0, detachedZ ? -this.prevAttachedSides.z * 0.25f : 0));
 
@@ -824,9 +809,9 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 			Vector3d tangentialMovement = moved.subtract(this.orientationNormal.scale(this.orientationNormal.dotProduct(moved)));
 
-			this.distanceWalkedModified = (float)((double)this.distanceWalkedModified + tangentialMovement.length() * 0.6D);
+			this.distanceWalkedModified = (float) ((double) this.distanceWalkedModified + tangentialMovement.length() * 0.6D);
 
-			this.distanceWalkedOnStepModified = (float)((double)this.distanceWalkedOnStepModified + (double)MathHelper.sqrt(dx * dx + dy * dy + dz * dz) * 0.6D);
+			this.distanceWalkedOnStepModified = (float) ((double) this.distanceWalkedOnStepModified + (double) MathHelper.sqrt(dx * dx + dy * dy + dz * dz) * 0.6D);
 
 			if(this.distanceWalkedOnStepModified > this.nextStepDistance && !state.isAir(this.world, pos)) {
 				this.nextStepDistance = this.determineNextStepDistance();
@@ -838,7 +823,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 					Vector3d motion = controller.getMotion();
 
-					float swimStrength = MathHelper.sqrt(motion.x * motion.x * (double)0.2F + motion.y * motion.y + motion.z * motion.z * (double)0.2F) * multiplier;
+					float swimStrength = MathHelper.sqrt(motion.x * motion.x * (double) 0.2F + motion.y * motion.y + motion.z * motion.z * 0.2F) * multiplier;
 					if(swimStrength > 1.0F) {
 						swimStrength = 1.0F;
 					}

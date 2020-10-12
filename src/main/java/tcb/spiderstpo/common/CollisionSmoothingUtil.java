@@ -20,11 +20,13 @@ public class CollisionSmoothingUtil {
 		return x;
 	}
 
-	private static float sampleSdf(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, float x, float y, float z, float smoothingRange, float invSmoothingRange) {
+	private static float sampleSdf(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, Vector3d pp, Vector3d pn, float x, float y, float z, float smoothingRange, float invSmoothingRange) {
 		float sdfDst = 0.0f;
 
-		boolean first = true;
-
+		Vector3d p = new Vector3d(x, y, z);
+	
+		float planeDst = (float) pn.dotProduct(p.subtract(pp));
+		
 		for(int i = 0; i < erx.length; i++) {
 			float rsx = x - ecx[i];
 			float rsy = y - ecy[i];
@@ -44,21 +46,33 @@ public class CollisionSmoothingUtil {
 			float k2 = invSqrt(prx2 * prx2 + pry2 * pry2 + prz2 * prz2);
 			float ellipsoidDst = k1 * (k1 - 1.0f) * k2;*/
 
-			if(!first) {
+			float d1 = -planeDst;
+			float d2 = ellipsoidDst;
+			
+			//ellipsoidDst = Math.max(ellipsoidDst, -planeDst);
+			float h2 = MathHelper.clamp(0.5f - 0.5f * (d2 - d1) * invSmoothingRange, 0.0f, 1.0f);
+			ellipsoidDst = d2 + (d1 - d2) * h2 + smoothingRange * h2 * (1.0f - h2);
+			
+			if(i == 0) {
+				sdfDst = ellipsoidDst;
+			} else {
 				//Smooth min - https://www.iquilezles.org/www/articles/smin/smin.htm
 				float h = MathHelper.clamp(0.5f + 0.5f * (ellipsoidDst - sdfDst) * invSmoothingRange, 0.0f, 1.0f);
 				sdfDst = ellipsoidDst + (sdfDst - ellipsoidDst) * h - smoothingRange * h * (1.0f - h);
-			} else {
-				sdfDst = ellipsoidDst;
-				first = false;
 			}
 		}
 
+		float d1 = -planeDst;
+		float d2 = sdfDst;
+		
+		float h2 = MathHelper.clamp(0.5f - 0.5f * (d2 - d1) * invSmoothingRange, 0.0f, 1.0f);
+		sdfDst = d2 + (d1 - d2) * h2 + smoothingRange * h2 * (1.0f - h2);
+		
 		return sdfDst;
 	}
 
 	@Nullable
-	public static Pair<Vector3d, Vector3d> findClosestPoint(List<AxisAlignedBB> boxes, float smoothingRange, float boxScale, float dx, int iters, float threshold, Vector3d p) {
+	public static Pair<Vector3d, Vector3d> findClosestPoint(List<AxisAlignedBB> boxes, Vector3d pp, Vector3d pn, float smoothingRange, float boxScale, float dx, int iters, float threshold, Vector3d p) {
 		if(boxes.isEmpty()) {
 			return null;
 		}
@@ -90,12 +104,14 @@ public class CollisionSmoothingUtil {
 			i++;
 		}
 
-		for(int j = 0; j < iters; j++) {
-			float dst = sampleSdf(erx, ery, erz, ecx, ecy, ecz, px, py, pz, smoothingRange, invSmoothingRange);
+		float halfThreshold = threshold * 0.5f;
 
-			float fx1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, px + dx, py, pz, smoothingRange, invSmoothingRange);
-			float fy1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, px, py + dx, pz, smoothingRange, invSmoothingRange);
-			float fz1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, px, py, pz + dx, smoothingRange, invSmoothingRange);
+		for(int j = 0; j < iters; j++) {
+			float dst = sampleSdf(erx, ery, erz, ecx, ecy, ecz, pp.subtract(p), pn, px, py, pz, smoothingRange, invSmoothingRange);
+
+			float fx1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, pp.subtract(p), pn, px + dx, py, pz, smoothingRange, invSmoothingRange);
+			float fy1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, pp.subtract(p), pn, px, py + dx, pz, smoothingRange, invSmoothingRange);
+			float fz1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, pp.subtract(p), pn, px, py, pz + dx, smoothingRange, invSmoothingRange);
 
 			float gx = dst - fx1;
 			float gy = dst - fy1;
@@ -109,13 +125,15 @@ public class CollisionSmoothingUtil {
 				return null;
 			}
 
-			float step = Math.max(dst, threshold / 2.0f);
+			float absDst = Math.abs(dst);
+
+			float step = absDst >= halfThreshold ? dst : Math.signum(dst) * halfThreshold;
 
 			px += gx * step;
 			py += gy * step;
 			pz += gz * step;
 
-			if(dst < threshold) {
+			if(absDst < threshold) {
 				return Pair.of(new Vector3d(p.x + px, p.y + py, p.z + pz), new Vector3d(-gx, -gy, -gz).normalize());
 			}
 		}
