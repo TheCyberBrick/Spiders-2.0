@@ -25,7 +25,7 @@ import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.world.IBlockReader;
 import net.minecraft.world.Region;
 
-public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindingEntity> extends WalkNodeProcessor {
+public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 	protected static final Vector3i PX = new Vector3i(1, 0, 0);
 	protected static final Vector3i NX = new Vector3i(-1, 0, 0);
 	protected static final Vector3i PY = new Vector3i(0, 1, 0);
@@ -48,7 +48,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 	protected static final Vector3i PYNZ = new Vector3i(0, 1, -1);
 	protected static final Vector3i NYNZ = new Vector3i(0, -1, -1);
 
-	protected T advancedPathFindingEntity;
+	protected IAdvancedPathFindingEntity advancedPathFindingEntity;
 	protected boolean startFromGround = true;
 	protected boolean checkObstructions;
 	protected int pathingSizeOffsetX, pathingSizeOffsetY, pathingSizeOffsetZ;
@@ -58,10 +58,6 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 	private final Object2BooleanMap<AxisAlignedBB> aabbCollisionCache = new Object2BooleanOpenHashMap<>();
 
 	protected boolean alwaysAllowDiagonals = true;
-
-	public void setAdvancedPathFindingEntity(T advancedPathFinding) {
-		this.advancedPathFindingEntity = advancedPathFinding;
-	}
 
 	public void setStartPathOnGround(boolean startFromGround) {
 		this.startFromGround = startFromGround;
@@ -96,6 +92,13 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 	@Override
 	public void func_225578_a_(Region sourceIn, MobEntity mob) {
 		super.func_225578_a_(sourceIn, mob);
+
+		if(mob instanceof IAdvancedPathFindingEntity) {
+			this.advancedPathFindingEntity = (IAdvancedPathFindingEntity) mob;
+		} else {
+			throw new IllegalArgumentException("Only mobs that extend " + IAdvancedPathFindingEntity.class.getSimpleName() + " are supported. Received: " + mob.getClass().getName());
+		}
+
 		this.pathingSizeOffsetX = Math.max(1, MathHelper.floor(this.entity.getWidth() / 2.0f + 1));
 		this.pathingSizeOffsetY = Math.max(1, MathHelper.floor(this.entity.getHeight() + 1));
 		this.pathingSizeOffsetZ = Math.max(1, MathHelper.floor(this.entity.getWidth() / 2.0f + 1));
@@ -571,7 +574,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 		} else {
 			PathNodeType nodeType = this.getPathNodeTypeCached(this.entity, x, y, z);
 
-			float malus = this.advancedPathFindingEntity.getPathingMalus(this.blockaccess, this.advancedPathFindingEntity, nodeType, pos, direction); //Replaces EntityLiving#getPathPriority
+			float malus = this.advancedPathFindingEntity.getPathingMalus(this.blockaccess, this.entity, nodeType, pos, direction); //Replaces EntityLiving#getPathPriority
 
 			double halfWidth = (double)this.entity.getWidth() / 2.0D;
 
@@ -699,7 +702,7 @@ public class AdvancedWalkNodeProcessor<T extends MobEntity & IAdvancedPathFindin
 					}
 
 					if(fallPathPoint != null) {
-						float bridingMalus = this.advancedPathFindingEntity.getBridgePathingMalus(this.advancedPathFindingEntity, new BlockPos(x, preFallY, z), fallPathPoint);
+						float bridingMalus = this.advancedPathFindingEntity.getBridgePathingMalus(this.entity, new BlockPos(x, preFallY, z), fallPathPoint);
 
 						if(bridingMalus >= 0.0f) {
 							result = new PathPoint[2];

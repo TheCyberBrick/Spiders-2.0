@@ -30,8 +30,7 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		this.climber = entity;
 
 		if(this.nodeProcessor instanceof AdvancedWalkNodeProcessor) {
-			@SuppressWarnings("unchecked")
-			AdvancedWalkNodeProcessor<T> processor = (AdvancedWalkNodeProcessor<T>) this.nodeProcessor;
+			AdvancedWalkNodeProcessor processor = (AdvancedWalkNodeProcessor) this.nodeProcessor;
 			processor.setStartPathOnGround(false);
 			processor.setCanPathWalls(canPathWalls);
 			processor.setCanPathCeiling(canPathCeiling);
