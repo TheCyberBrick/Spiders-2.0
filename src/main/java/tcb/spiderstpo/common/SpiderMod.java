@@ -26,6 +26,7 @@ import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
 import net.minecraftforge.event.world.ChunkEvent;
 import net.minecraftforge.event.world.WorldEvent;
+import net.minecraftforge.eventbus.api.Event.Result;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.ModLoadingContext;
@@ -97,14 +98,14 @@ public class SpiderMod {
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)
-	public void onSpawnEntity(final LivingSpawnEvent.SpecialSpawn event) {
+	public void onSpawnEntity(final LivingSpawnEvent.CheckSpawn event) {
 		SpawnReason reason = event.getSpawnReason();
 
 		if(Config.REPLACE_ANY_SPAWNS.get() || (Config.REPLACE_NATURAL_SPAWNS.get() && reason != SpawnReason.COMMAND)) {
 			Entity entity = event.getEntity();
 
 			if(!entity.getEntityWorld().isRemote && this.replaceSpawn(entity, reason)) {
-				event.setCanceled(true);
+				event.setResult(Result.DENY);
 			}
 		}
 	}
