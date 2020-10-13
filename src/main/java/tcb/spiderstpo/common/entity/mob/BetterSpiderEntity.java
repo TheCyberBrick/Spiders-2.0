@@ -128,9 +128,13 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 
 				BlockState state = cache.getBlockState(offsetPos);
 
-				if(this.canClimbOnBlock(state, pos) && this.getNavigator().getNodeProcessor().getPathNodeType(cache, offsetPos.getX(), offsetPos.getY(), offsetPos.getZ()) == PathNodeType.BLOCKED) {
-					hasClimbableNeigbor = true;
-					break;
+				if(this.canClimbOnBlock(state, offsetPos)) {
+					PathNodeType offsetNodeType = this.getNavigator().getNodeProcessor().getPathNodeType(cache, offsetPos.getX(), offsetPos.getY(), offsetPos.getZ());
+
+					if(offsetNodeType == PathNodeType.BLOCKED || offsetNodeType == PathNodeType.LEAVES) {
+						hasClimbableNeigbor = true;
+						break;
+					}
 				}
 			}
 
@@ -138,6 +142,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 				return -1.0f;
 			}
 		}
+
 		return super.getPathingMalus(cache, entity, nodeType, pos, direction);
 	}
 
