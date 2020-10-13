@@ -28,7 +28,7 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 	}
 
 	public BetterCaveSpiderEntity(World world) {
-		super(SpiderMod.BETTER_CAVE_SPIDER.get(), world);
+		this(SpiderMod.BETTER_CAVE_SPIDER.get(), world);
 	}
 
 	public static AttributeModifierMap.MutableAttribute getAttributeMap() {

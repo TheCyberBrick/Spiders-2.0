@@ -57,7 +57,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	}
 
 	public BetterSpiderEntity(World world) {
-		super(SpiderMod.BETTER_SPIDER.get(), world);
+		this(SpiderMod.BETTER_SPIDER.get(), world);
 	}
 
 	@Override

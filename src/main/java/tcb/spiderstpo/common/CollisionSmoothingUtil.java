@@ -20,13 +20,11 @@ public class CollisionSmoothingUtil {
 		return x;
 	}
 
-	private static float sampleSdf(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, Vector3d pp, Vector3d pn, float x, float y, float z, float smoothingRange, float invSmoothingRange) {
+	private static float sampleSdf(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, float px, float py, float pz, float pnx, float pny, float pnz, float x, float y, float z, float smoothingRange, float invSmoothingRange) {
 		float sdfDst = 0.0f;
 
-		Vector3d p = new Vector3d(x, y, z);
-	
-		float planeDst = (float) pn.dotProduct(p.subtract(pp));
-		
+		float planeDst = pnx * (x - px) + pny * (y - py) + pnz * (z - pz);
+
 		for(int i = 0; i < erx.length; i++) {
 			float rsx = x - ecx[i];
 			float rsy = y - ecy[i];
@@ -46,28 +44,23 @@ public class CollisionSmoothingUtil {
 			float k2 = invSqrt(prx2 * prx2 + pry2 * pry2 + prz2 * prz2);
 			float ellipsoidDst = k1 * (k1 - 1.0f) * k2;*/
 
-			float d1 = -planeDst;
-			float d2 = ellipsoidDst;
-			
-			//ellipsoidDst = Math.max(ellipsoidDst, -planeDst);
-			float h2 = MathHelper.clamp(0.5f - 0.5f * (d2 - d1) * invSmoothingRange, 0.0f, 1.0f);
-			ellipsoidDst = d2 + (d1 - d2) * h2 + smoothingRange * h2 * (1.0f - h2);
-			
+			//Smooth intersection - https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+			float h = MathHelper.clamp(0.5f - 0.5f * (ellipsoidDst + planeDst) * invSmoothingRange, 0.0f, 1.0f);
+			ellipsoidDst = ellipsoidDst + (-planeDst - ellipsoidDst) * h + smoothingRange * h * (1.0f - h);
+
 			if(i == 0) {
 				sdfDst = ellipsoidDst;
 			} else {
 				//Smooth min - https://www.iquilezles.org/www/articles/smin/smin.htm
-				float h = MathHelper.clamp(0.5f + 0.5f * (ellipsoidDst - sdfDst) * invSmoothingRange, 0.0f, 1.0f);
+				h = MathHelper.clamp(0.5f + 0.5f * (ellipsoidDst - sdfDst) * invSmoothingRange, 0.0f, 1.0f);
 				sdfDst = ellipsoidDst + (sdfDst - ellipsoidDst) * h - smoothingRange * h * (1.0f - h);
 			}
 		}
 
-		float d1 = -planeDst;
-		float d2 = sdfDst;
-		
-		float h2 = MathHelper.clamp(0.5f - 0.5f * (d2 - d1) * invSmoothingRange, 0.0f, 1.0f);
-		sdfDst = d2 + (d1 - d2) * h2 + smoothingRange * h2 * (1.0f - h2);
-		
+		//Smooth intersection - https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+		float h = MathHelper.clamp(0.5f - 0.5f * (sdfDst + planeDst) * invSmoothingRange, 0.0f, 1.0f);
+		sdfDst = sdfDst + (-planeDst - sdfDst) * h + smoothingRange * h * (1.0f - h);
+
 		return sdfDst;
 	}
 
@@ -76,6 +69,13 @@ public class CollisionSmoothingUtil {
 		if(boxes.isEmpty()) {
 			return null;
 		}
+
+		float plx = (float) (pp.x - p.x);
+		float ply = (float) (pp.y - p.y);
+		float plz = (float) (pp.z - p.z);
+		float pnx = (float) pn.x;
+		float pny = (float) pn.y;
+		float pnz = (float) pn.z;
 
 		float px = 0.0f;
 		float py = 0.0f;
@@ -93,9 +93,9 @@ public class CollisionSmoothingUtil {
 
 		int i = 0;
 		for(AxisAlignedBB box : boxes) {
-			erx[i] = 1.0f / ((float)(box.maxX - box.minX) / 2 * boxScale);
-			ery[i] = 1.0f / ((float)(box.maxY - box.minY) / 2 * boxScale);
-			erz[i] = 1.0f / ((float)(box.maxZ - box.minZ) / 2 * boxScale);
+			erx[i] = 1.0f / ((float) (box.maxX - box.minX) / 2 * boxScale);
+			ery[i] = 1.0f / ((float) (box.maxY - box.minY) / 2 * boxScale);
+			erz[i] = 1.0f / ((float) (box.maxZ - box.minZ) / 2 * boxScale);
 
 			ecx[i] = (float) ((box.minX + box.maxX) / 2 - p.x);
 			ecy[i] = (float) ((box.minY + box.maxY) / 2 - p.y);
@@ -107,11 +107,11 @@ public class CollisionSmoothingUtil {
 		float halfThreshold = threshold * 0.5f;
 
 		for(int j = 0; j < iters; j++) {
-			float dst = sampleSdf(erx, ery, erz, ecx, ecy, ecz, pp.subtract(p), pn, px, py, pz, smoothingRange, invSmoothingRange);
+			float dst = sampleSdf(erx, ery, erz, ecx, ecy, ecz, plx, ply, plz, pnx, pny, pnz, px, py, pz, smoothingRange, invSmoothingRange);
 
-			float fx1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, pp.subtract(p), pn, px + dx, py, pz, smoothingRange, invSmoothingRange);
-			float fy1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, pp.subtract(p), pn, px, py + dx, pz, smoothingRange, invSmoothingRange);
-			float fz1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, pp.subtract(p), pn, px, py, pz + dx, smoothingRange, invSmoothingRange);
+			float fx1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, plx, ply, plz, pnx, pny, pnz, px + dx, py, pz, smoothingRange, invSmoothingRange);
+			float fy1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, plx, ply, plz, pnx, pny, pnz, px, py + dx, pz, smoothingRange, invSmoothingRange);
+			float fz1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, plx, ply, plz, pnx, pny, pnz, px, py, pz + dx, smoothingRange, invSmoothingRange);
 
 			float gx = dst - fx1;
 			float gy = dst - fy1;
