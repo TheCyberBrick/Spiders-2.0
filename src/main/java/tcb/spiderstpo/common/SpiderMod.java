@@ -111,6 +111,19 @@ public class SpiderMod {
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)
+	public void onSpawnEntity(final LivingSpawnEvent.SpecialSpawn event) {
+		SpawnReason reason = event.getSpawnReason();
+
+		if(Config.REPLACE_ANY_SPAWNS.get() || (Config.REPLACE_NATURAL_SPAWNS.get() && reason != SpawnReason.COMMAND)) {
+			Entity entity = event.getEntity();
+
+			if(!entity.getEntityWorld().isRemote && this.replaceSpawn(entity, reason)) {
+				event.setCanceled(true);
+			}
+		}
+	}
+
+	@SubscribeEvent(priority = EventPriority.HIGHEST)
 	public void onAddEntity(final EntityJoinWorldEvent event) {
 		if(Config.REPLACE_ANY_SPAWNS.get()) {
 			Entity entity = event.getEntity();
