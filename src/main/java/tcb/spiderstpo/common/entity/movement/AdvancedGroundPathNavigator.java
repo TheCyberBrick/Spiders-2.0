@@ -45,7 +45,7 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFind
 
 		if(this.nodeProcessor instanceof AdvancedWalkNodeProcessor) {
 			AdvancedWalkNodeProcessor<T> processor = (AdvancedWalkNodeProcessor<T>) this.nodeProcessor;
-			processor.setObstructionAwareEntity(entity);
+			processor.setAdvancedPathFindingEntity(entity);
 			processor.setCheckObstructions(checkObstructions);
 		}
 	}

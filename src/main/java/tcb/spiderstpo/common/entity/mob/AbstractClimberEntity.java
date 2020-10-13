@@ -3,6 +3,7 @@ package tcb.spiderstpo.common.entity.mob;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -248,7 +249,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 				continue;
 			}
 
-			List<AxisAlignedBB> collisionBoxes = this.world.getCollisionShapes(this, entityBox.grow(0.2f).expand(facing.getXOffset() * stickingDistance, facing.getYOffset() * stickingDistance, facing.getZOffset() * stickingDistance)).flatMap(s -> s.toBoundingBoxList().stream()).collect(Collectors.toList());
+			List<AxisAlignedBB> collisionBoxes = this.getCollisionBoxes(entityBox.grow(0.2f).expand(facing.getXOffset() * stickingDistance, facing.getYOffset() * stickingDistance, facing.getZOffset() * stickingDistance)).collect(Collectors.toList());
 
 			double closestDst = Double.MAX_VALUE;
 
@@ -418,7 +419,21 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 	}
 
 	public float getVerticalOffset(float partialTicks) {
-		return /*0.45f*/0.075f;
+		return 0.075f;
+	}
+
+	protected Stream<AxisAlignedBB> getCollisionBoxes(AxisAlignedBB aabb) {
+		//getCollisionShapes but with block state predicate
+		return this.world.func_241457_a_(this, aabb, this::canClimbOnBlock).flatMap(shape -> shape.toBoundingBoxList().stream());
+	}
+
+	protected boolean canClimbOnBlock(BlockState state, BlockPos pos) {
+		return true;
+	}
+
+	protected float getBlockSlipperiness(BlockPos pos) {
+		BlockState offsetState = this.world.getBlockState(pos);
+		return offsetState.getBlock().getSlipperiness(offsetState, this.world, pos, this) * 0.91f;
 	}
 
 	protected void updateOffsetsAndOrientation() {
@@ -437,7 +452,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 			Vector3d s = p.add(0, this.getHeight() * 0.5f, 0);
 			AxisAlignedBB inclusionBox = new AxisAlignedBB(s.x, s.y, s.z, s.x, s.y, s.z).grow(this.collisionsInclusionRange);
 
-			List<AxisAlignedBB> boxes = this.world.getCollisionShapes(this, inclusionBox).flatMap(shape -> shape.toBoundingBoxList().stream()).collect(Collectors.toList());
+			List<AxisAlignedBB> boxes = this.getCollisionBoxes(inclusionBox).collect(Collectors.toList());
 
 			Pair<Vector3d, Vector3d> attachmentPoint = CollisionSmoothingUtil.findClosestPoint(boxes, s, this.orientationNormal.scale(-1), this.collisionsSmoothingRange, 1.0f, 0.001f, 20, 0.05f, s);
 
@@ -462,7 +477,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		this.stickingOffsetY = baseStickingOffsetY + (this.attachedStickingOffsetY - baseStickingOffsetY) * attachmentBlend;
 		this.stickingOffsetZ = baseStickingOffsetZ + (this.attachedStickingOffsetZ - baseStickingOffsetZ) * attachmentBlend;
 		this.orientationNormal = baseOrientationNormal.add(this.attachedOrientationNormal.subtract(baseOrientationNormal).scale(attachmentBlend)).normalize();
-		
+
 		if(!isAttached) {
 			this.attachedTicks = Math.max(0, this.attachedTicks - 1);
 		} else {
@@ -604,8 +619,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 			if(this.onGround) {
 				BlockPos offsetPos = new BlockPos(this.getPositionVec()).offset(walkingSide.getLeft());
-				BlockState offsetState = this.world.getBlockState(offsetPos);
-				slipperiness = offsetState.getBlock().getSlipperiness(offsetState, this.world, offsetPos, this) * 0.91f;
+				slipperiness = this.getBlockSlipperiness(offsetPos);
 			}
 
 			float friction = forward * 0.16277136F / (slipperiness * slipperiness * slipperiness);
@@ -661,7 +675,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		}
 
 		this.setMotion(this.getMotion().add(stickingForce));
-		
+
 		double px = this.getPosX();
 		double py = this.getPosY();
 		double pz = this.getPosZ();
@@ -678,8 +692,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 			this.fallDistance = 0;
 
 			BlockPos offsetPos = new BlockPos(this.getPositionVec()).offset(walkingSide.getLeft());
-			BlockState offsetState = this.world.getBlockState(offsetPos);
-			slipperiness = offsetState.getBlock().getSlipperiness(offsetState, this.world, offsetPos, this) * 0.91F;
+			slipperiness = this.getBlockSlipperiness(offsetPos);
 		}
 
 		motion = this.getMotion();

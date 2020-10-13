@@ -75,6 +75,11 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 	@Override
 	@Nullable
 	public ILivingEntityData onInitialSpawn(IServerWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
+		//Increase vanilla spider follow range to 24
+		if(this.getAttribute(Attributes.field_233819_b_).getBaseValue() == 16.0D) {
+			this.getAttribute(Attributes.field_233819_b_).setBaseValue(24.0D);
+		}
+
 		return spawnDataIn;
 	}
 

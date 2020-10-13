@@ -11,6 +11,7 @@ import net.minecraft.entity.EntitySize;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ILivingEntityData;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.Pose;
 import net.minecraft.entity.SpawnReason;
 import net.minecraft.entity.ai.attributes.AttributeModifierMap;
@@ -33,21 +34,26 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.ShootableItem;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.potion.Effect;
 import net.minecraft.potion.EffectInstance;
 import net.minecraft.potion.Effects;
 import net.minecraft.util.DamageSource;
+import net.minecraft.util.Direction;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundCategory;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.SoundEvents;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.world.Difficulty;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.IBlockReader;
 import net.minecraft.world.IServerWorld;
 import net.minecraft.world.World;
+import tcb.spiderstpo.common.ModTags;
 import tcb.spiderstpo.common.SpiderMod;
 
 public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
@@ -90,6 +96,49 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	@Override
 	public SoundCategory getSoundCategory() {
 		return SoundCategory.HOSTILE;
+	}
+
+	@Override	
+	protected boolean canClimbOnBlock(BlockState state, BlockPos pos) {
+		return !state.getBlock().isIn(ModTags.NON_CLIMBABLE);
+	}
+
+	@Override
+	protected float getBlockSlipperiness(BlockPos pos) {
+		BlockState offsetState = this.world.getBlockState(pos);
+
+		float slipperiness = offsetState.getBlock().getSlipperiness(offsetState, this.world, pos, this) * 0.91f;
+
+		if(offsetState.getBlock().isIn(ModTags.NON_CLIMBABLE)) {
+			slipperiness = 1 - (1 - slipperiness) * 0.25f;
+		}
+
+		return slipperiness;
+	}
+
+	@Override
+	public float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction) {
+		if(direction.getY() != 0) {
+			boolean hasClimbableNeigbor = false;
+
+			BlockPos.Mutable offsetPos = new BlockPos.Mutable();
+
+			for(Direction offset : Direction.values()) {
+				offsetPos.setPos(pos.getX() + offset.getXOffset(), pos.getY() + offset.getYOffset(), pos.getZ() + offset.getZOffset());
+
+				BlockState state = cache.getBlockState(offsetPos);
+
+				if(this.canClimbOnBlock(state, pos) && this.getNavigator().getNodeProcessor().getPathNodeType(cache, offsetPos.getX(), offsetPos.getY(), offsetPos.getZ()) == PathNodeType.BLOCKED) {
+					hasClimbableNeigbor = true;
+					break;
+				}
+			}
+
+			if(!hasClimbableNeigbor) {
+				return -1.0f;
+			}
+		}
+		return super.getPathingMalus(cache, entity, nodeType, pos, direction);
 	}
 
 	@Override

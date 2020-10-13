@@ -7,6 +7,8 @@ import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.pathfinding.PathPoint;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.vector.Vector3i;
+import net.minecraft.world.IBlockReader;
 
 public interface IAdvancedPathFindingEntity {
 	/**
@@ -39,11 +41,21 @@ public interface IAdvancedPathFindingEntity {
 	 * are preferred over all other nodes. Nodes with a positive value incur an additional travel cost of the same magnitude
 	 * and the higher their value the less they are preferred. Note that the additional travel cost increases the path's "length" (i.e. cost)
 	 * and thus decreases the actual maximum path length in blocks.
+	 * @param cache
 	 * @param type
 	 * @param pos
+	 * @param direction
 	 * @return
 	 */
-	public default float getPathingMalus(MobEntity entity, PathNodeType nodeType, BlockPos pos) {
+	public default float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction) {
 		return entity.getPathPriority(nodeType);
+	}
+	
+	/**
+	 * Called after the path finder has finished finding a path.
+	 * Can e.g. be used to clear caches.
+	 */
+	public default void pathFinderCleanup() {
+		
 	}
 }
