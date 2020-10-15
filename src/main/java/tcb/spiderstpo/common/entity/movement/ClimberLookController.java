@@ -15,12 +15,12 @@ public class ClimberLookController extends LookController {
 	@Override
 	protected float getTargetPitch() {
 		Vector3d dir = new Vector3d(this.posX - this.mob.getPosX(), this.posY - this.mob.getPosYEye(), this.posZ - this.mob.getPosZ());
-		return this.climber.getOrientation(1).getRotation(dir).getRight();
+		return this.climber.getOrientation().getRotation(dir).getRight();
 	}
 
 	@Override
 	protected float getTargetYaw() {
 		Vector3d dir = new Vector3d(this.posX - this.mob.getPosX(), this.posY - this.mob.getPosYEye(), this.posZ - this.mob.getPosZ());
-		return this.climber.getOrientation(1).getRotation(dir).getLeft();
+		return this.climber.getOrientation().getRotation(dir).getLeft();
 	}
 }

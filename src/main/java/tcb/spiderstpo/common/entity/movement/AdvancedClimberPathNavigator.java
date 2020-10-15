@@ -85,7 +85,7 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		int sizeY = MathHelper.ceil(this.entity.getHeight());
 		int sizeZ = sizeX;
 
-		AbstractClimberEntity.Orientation orientation = this.climber.getOrientation(1);
+		AbstractClimberEntity.Orientation orientation = this.climber.getOrientation();
 		Vector3d upVector = orientation.getDirection(this.climber.rotationYaw, -90);
 
 		this.verticalFacing = Direction.getFacingFromVector((float)upVector.x, (float)upVector.y, (float)upVector.z);

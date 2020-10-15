@@ -24,7 +24,7 @@ public class ClimberMoveController extends MovementController {
 		if(this.action == MovementController.Action.MOVE_TO) {
 			this.action = MovementController.Action.WAIT;
 
-			AbstractClimberEntity.Orientation orientation = this.climber.getOrientation(1);
+			AbstractClimberEntity.Orientation orientation = this.climber.getOrientation();
 
 			Vector3d up = orientation.getDirection(this.climber.rotationYaw, -90);
 
@@ -34,7 +34,7 @@ public class ClimberMoveController extends MovementController {
 
 			//TODO This is unreliable when moving from ground to wall
 			Direction side = this.climber.getWalkingSide().getLeft();
-			
+
 			double dx = (this.posX + Math.max(0, side.getXOffset()) * (entitySizeX - 1) + side.getXOffset() * 0.5f) - this.mob.getPosX();
 			double dy = (this.posY + Math.max(0, side.getYOffset()) * (entitySizeY - 1) + side.getYOffset() * 0.5f) - this.mob.getPosY();
 			double dz = (this.posZ + Math.max(0, side.getZOffset()) * (entitySizeZ - 1) + side.getZOffset() * 0.5f) - this.mob.getPosZ();
@@ -51,7 +51,7 @@ public class ClimberMoveController extends MovementController {
 				float rx = (float)orientation.localZ.dotProduct(targetDir);
 				float ry = (float)orientation.localX.dotProduct(targetDir);
 
-				this.mob.rotationYaw = this.limitAngle(this.mob.rotationYaw, 270.0f - (float)Math.toDegrees(Math.atan2(rx, ry)), 90.0f);
+				this.mob.rotationYaw = this.limitAngle(this.mob.rotationYaw, 270.0f - (float)Math.toDegrees(MathHelper.atan2(rx, ry)), 90.0f);
 
 				this.mob.setAIMoveSpeed((float)speed);
 			}

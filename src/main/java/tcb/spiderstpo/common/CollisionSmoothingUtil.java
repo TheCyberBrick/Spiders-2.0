@@ -1,13 +1,16 @@
 package tcb.spiderstpo.common;
 
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.annotation.Nullable;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import it.unimi.dsi.fastutil.floats.FloatArrays;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.shapes.VoxelShapes;
 import net.minecraft.util.math.vector.Vector3d;
 
 public class CollisionSmoothingUtil {
@@ -20,12 +23,12 @@ public class CollisionSmoothingUtil {
 		return x;
 	}
 
-	private static float sampleSdf(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, float px, float py, float pz, float pnx, float pny, float pnz, float x, float y, float z, float smoothingRange, float invSmoothingRange) {
+	private static float sampleSdf(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, int count, float px, float py, float pz, float pnx, float pny, float pnz, float x, float y, float z, float smoothingRange, float invSmoothingRange) {
 		float sdfDst = 0.0f;
 
 		float planeDst = pnx * (x - px) + pny * (y - py) + pnz * (z - pz);
 
-		for(int i = 0; i < erx.length; i++) {
+		for(int i = 0; i < count; i++) {
 			float rsx = x - ecx[i];
 			float rsy = y - ecy[i];
 			float rsz = z - ecz[i];
@@ -64,24 +67,68 @@ public class CollisionSmoothingUtil {
 		return sdfDst;
 	}
 
+	private static class BoxConsumer implements VoxelShapes.ILineConsumer {
+		private int capacity = 16;
+		private int size = 0;
+
+		private float[] erx = new float[this.capacity];
+		private float[] ery = new float[this.capacity];
+		private float[] erz = new float[this.capacity];
+
+		private float[] ecx = new float[this.capacity];
+		private float[] ecy = new float[this.capacity];
+		private float[] ecz = new float[this.capacity];
+
+		private final Vector3d p;
+		private final float boxScale;
+
+		private BoxConsumer(Vector3d p, float boxScale) {
+			this.p = p;
+			this.boxScale = boxScale;
+		}
+
+		@Override
+		public void consume(double minX, double minY, double minZ, double maxX, double maxY, double maxZ) {
+			if(this.size == this.capacity) {
+				this.capacity = (int) Math.max(Math.min((long) this.capacity + (this.capacity >> 1), it.unimi.dsi.fastutil.Arrays.MAX_ARRAY_SIZE), this.capacity);
+				this.erx = FloatArrays.forceCapacity(this.erx, this.capacity, this.size);
+				this.ery = FloatArrays.forceCapacity(this.ery, this.capacity, this.size);
+				this.erz = FloatArrays.forceCapacity(this.erz, this.capacity, this.size);
+				this.ecx = FloatArrays.forceCapacity(this.ecx, this.capacity, this.size);
+				this.ecy = FloatArrays.forceCapacity(this.ecy, this.capacity, this.size);
+				this.ecz = FloatArrays.forceCapacity(this.ecz, this.capacity, this.size);
+			}
+
+			this.erx[this.size] = 1.0f / ((float) (maxX - minX) / 2 * this.boxScale);
+			this.ery[this.size] = 1.0f / ((float) (maxY - minY) / 2 * this.boxScale);
+			this.erz[this.size] = 1.0f / ((float) (maxZ - minZ) / 2 * this.boxScale);
+
+			this.ecx[this.size] = (float) ((minX + maxX) / 2 - this.p.x);
+			this.ecy[this.size] = (float) ((minY + maxY) / 2 - this.p.y);
+			this.ecz[this.size] = (float) ((minZ + maxZ) / 2 - this.p.z);
+
+			this.size++;
+		}
+	}
+
+	@Nullable
+	public static Pair<Vector3d, Vector3d> findClosestPoint(Consumer<VoxelShapes.ILineConsumer> consumer, Vector3d pp, Vector3d pn, float smoothingRange, float boxScale, float dx, int iters, float threshold, Vector3d p) {
+		BoxConsumer boxConsumer = new BoxConsumer(p, boxScale);
+
+		consumer.accept(boxConsumer);
+
+		if(boxConsumer.size == 0) {
+			return null;
+		}
+
+		return findClosestPoint(boxConsumer.erx, boxConsumer.ery, boxConsumer.erz, boxConsumer.ecx, boxConsumer.ecy, boxConsumer.ecz, boxConsumer.size, pp, pn, smoothingRange, boxScale, dx, iters, threshold, p);
+	}
+
 	@Nullable
 	public static Pair<Vector3d, Vector3d> findClosestPoint(List<AxisAlignedBB> boxes, Vector3d pp, Vector3d pn, float smoothingRange, float boxScale, float dx, int iters, float threshold, Vector3d p) {
 		if(boxes.isEmpty()) {
 			return null;
 		}
-
-		float plx = (float) (pp.x - p.x);
-		float ply = (float) (pp.y - p.y);
-		float plz = (float) (pp.z - p.z);
-		float pnx = (float) pn.x;
-		float pny = (float) pn.y;
-		float pnz = (float) pn.z;
-
-		float px = 0.0f;
-		float py = 0.0f;
-		float pz = 0.0f;
-
-		float invSmoothingRange = 1.0f / smoothingRange;
 
 		float[] erx = new float[boxes.size()];
 		float[] ery = new float[boxes.size()];
@@ -104,14 +151,32 @@ public class CollisionSmoothingUtil {
 			i++;
 		}
 
+		return findClosestPoint(erx, ery, erz, ecx, ecy, ecz, boxes.size(), pp, pn, smoothingRange, boxScale, dx, iters, threshold, p);
+	}
+
+	@Nullable
+	private static Pair<Vector3d, Vector3d> findClosestPoint(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, int count, Vector3d pp, Vector3d pn, float smoothingRange, float boxScale, float dx, int iters, float threshold, Vector3d p) {
 		float halfThreshold = threshold * 0.5f;
 
-		for(int j = 0; j < iters; j++) {
-			float dst = sampleSdf(erx, ery, erz, ecx, ecy, ecz, plx, ply, plz, pnx, pny, pnz, px, py, pz, smoothingRange, invSmoothingRange);
+		float plx = (float) (pp.x - p.x);
+		float ply = (float) (pp.y - p.y);
+		float plz = (float) (pp.z - p.z);
+		float pnx = (float) pn.x;
+		float pny = (float) pn.y;
+		float pnz = (float) pn.z;
 
-			float fx1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, plx, ply, plz, pnx, pny, pnz, px + dx, py, pz, smoothingRange, invSmoothingRange);
-			float fy1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, plx, ply, plz, pnx, pny, pnz, px, py + dx, pz, smoothingRange, invSmoothingRange);
-			float fz1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, plx, ply, plz, pnx, pny, pnz, px, py, pz + dx, smoothingRange, invSmoothingRange);
+		float px = 0.0f;
+		float py = 0.0f;
+		float pz = 0.0f;
+
+		float invSmoothingRange = 1.0f / smoothingRange;
+
+		for(int j = 0; j < iters; j++) {
+			float dst = sampleSdf(erx, ery, erz, ecx, ecy, ecz, count, plx, ply, plz, pnx, pny, pnz, px, py, pz, smoothingRange, invSmoothingRange);
+
+			float fx1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, count, plx, ply, plz, pnx, pny, pnz, px + dx, py, pz, smoothingRange, invSmoothingRange);
+			float fy1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, count, plx, ply, plz, pnx, pny, pnz, px, py + dx, pz, smoothingRange, invSmoothingRange);
+			float fz1 = sampleSdf(erx, ery, erz, ecx, ecy, ecz, count, plx, ply, plz, pnx, pny, pnz, px, py, pz + dx, smoothingRange, invSmoothingRange);
 
 			float gx = dst - fx1;
 			float gy = dst - fy1;
