@@ -1,5 +1,7 @@
 package tcb.spiderstpo.common.entity.movement;
 
+import java.util.function.Predicate;
+
 import javax.annotation.Nullable;
 
 import net.minecraft.entity.MobEntity;
@@ -45,17 +47,18 @@ public interface IAdvancedPathFindingEntity {
 	 * @param type
 	 * @param pos
 	 * @param direction
+	 * @param sides
 	 * @return
 	 */
-	public default float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction) {
+	public default float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction, Predicate<Direction> sides) {
 		return entity.getPathPriority(nodeType);
 	}
-	
+
 	/**
 	 * Called after the path finder has finished finding a path.
 	 * Can e.g. be used to clear caches.
 	 */
 	public default void pathFinderCleanup() {
-		
+
 	}
 }

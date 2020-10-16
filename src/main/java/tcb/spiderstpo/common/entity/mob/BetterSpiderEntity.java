@@ -80,7 +80,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	}
 
 	public static AttributeModifierMap.MutableAttribute getAttributeMap() {
-		return MonsterEntity.func_234295_eP_().func_233815_a_(Attributes.field_233819_b_ /*follow range*/, 24.0f).func_233815_a_(Attributes.field_233818_a_ /*max health*/, 24.0f).func_233815_a_(Attributes.field_233821_d_ /*movement speed*/, 0.3f);
+		return MonsterEntity.func_234295_eP_().func_233815_a_(Attributes.field_233819_b_ /*follow range*/, 24.0f).func_233815_a_(Attributes.field_233818_a_ /*max health*/, 16.0f).func_233815_a_(Attributes.field_233821_d_ /*movement speed*/, 0.3f);
 	}
 
 	@Override
@@ -117,23 +117,20 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	}
 
 	@Override
-	public float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction) {
+	public float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction, Predicate<Direction> sides) {
 		if(direction.getY() != 0) {
 			boolean hasClimbableNeigbor = false;
 
 			BlockPos.Mutable offsetPos = new BlockPos.Mutable();
 
 			for(Direction offset : Direction.values()) {
-				offsetPos.setPos(pos.getX() + offset.getXOffset(), pos.getY() + offset.getYOffset(), pos.getZ() + offset.getZOffset());
+				if(sides.test(offset)) {
+					offsetPos.setPos(pos.getX() + offset.getXOffset(), pos.getY() + offset.getYOffset(), pos.getZ() + offset.getZOffset());
 
-				BlockState state = cache.getBlockState(offsetPos);
+					BlockState state = cache.getBlockState(offsetPos);
 
-				if(this.canClimbOnBlock(state, offsetPos)) {
-					PathNodeType offsetNodeType = this.getNavigator().getNodeProcessor().getPathNodeType(cache, offsetPos.getX(), offsetPos.getY(), offsetPos.getZ());
-
-					if(offsetNodeType == PathNodeType.BLOCKED || offsetNodeType == PathNodeType.LEAVES) {
+					if(this.canClimbOnBlock(state, offsetPos)) {
 						hasClimbableNeigbor = true;
-						break;
 					}
 				}
 			}
@@ -143,7 +140,7 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 			}
 		}
 
-		return super.getPathingMalus(cache, entity, nodeType, pos, direction);
+		return super.getPathingMalus(cache, entity, nodeType, pos, direction, sides);
 	}
 
 	@Override

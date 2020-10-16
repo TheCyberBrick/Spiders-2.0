@@ -509,13 +509,23 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 
 			Pair<Vector3d, Vector3d> attachmentPoint = CollisionSmoothingUtil.findClosestPoint(consumer -> this.forEachCollisonBox(inclusionBox, consumer), s, this.orientationNormal.scale(-1), this.collisionsSmoothingRange, 1.0f, 0.001f, 20, 0.05f, s);
 
-			if(attachmentPoint != null) {
-				isAttached = true;
+			AxisAlignedBB entityBox = this.getBoundingBox();
 
-				this.attachedStickingOffsetX = MathHelper.clamp(attachmentPoint.getLeft().x - p.x, -this.getWidth() / 2, this.getWidth() / 2);
-				this.attachedStickingOffsetY = MathHelper.clamp(attachmentPoint.getLeft().y - p.y, 0, this.getHeight());
-				this.attachedStickingOffsetZ = MathHelper.clamp(attachmentPoint.getLeft().z - p.z, -this.getWidth() / 2, this.getWidth() / 2);
-				this.attachedOrientationNormal = attachmentPoint.getRight();
+			if(attachmentPoint != null) {
+				Vector3d attachmentPos = attachmentPoint.getLeft();
+
+				double dx = Math.max(entityBox.minX - attachmentPos.x, attachmentPos.x - entityBox.maxX);
+				double dy = Math.max(entityBox.minY - attachmentPos.y, attachmentPos.y - entityBox.maxY);
+				double dz = Math.max(entityBox.minZ - attachmentPos.z, attachmentPos.z - entityBox.maxZ);
+
+				if(Math.max(dx, Math.max(dy, dz)) < 0.5f) {
+					isAttached = true;
+
+					this.attachedStickingOffsetX = MathHelper.clamp(attachmentPos.x - p.x, -this.getWidth() / 2, this.getWidth() / 2);
+					this.attachedStickingOffsetY = MathHelper.clamp(attachmentPos.y - p.y, 0, this.getHeight());
+					this.attachedStickingOffsetZ = MathHelper.clamp(attachmentPos.z - p.z, -this.getWidth() / 2, this.getWidth() / 2);
+					this.attachedOrientationNormal = attachmentPoint.getRight();
+				}
 			}
 		}
 

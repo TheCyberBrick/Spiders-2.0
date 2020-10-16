@@ -32,7 +32,6 @@ public class ClimberMoveController extends MovementController {
 			int entitySizeY = MathHelper.floor(this.mob.getHeight() + 1.0F);
 			int entitySizeZ = MathHelper.floor(this.mob.getWidth() + 1.0F);
 
-			//TODO This is unreliable when moving from ground to wall
 			Direction side = this.climber.getWalkingSide().getLeft();
 
 			double dx = (this.posX + Math.max(0, side.getXOffset()) * (entitySizeX - 1) + side.getXOffset() * 0.5f) - this.mob.getPosX();
@@ -48,12 +47,23 @@ public class ClimberMoveController extends MovementController {
 			if(targetDist < 0.0001D) {
 				this.mob.setMoveForward(0);
 			} else {
-				float rx = (float)orientation.localZ.dotProduct(targetDir);
-				float ry = (float)orientation.localX.dotProduct(targetDir);
+				float rx = (float) orientation.localZ.dotProduct(targetDir);
+				float ry = (float) orientation.localX.dotProduct(targetDir);
 
-				this.mob.rotationYaw = this.limitAngle(this.mob.rotationYaw, 270.0f - (float)Math.toDegrees(MathHelper.atan2(rx, ry)), 90.0f);
+				this.mob.rotationYaw = this.limitAngle(this.mob.rotationYaw, 270.0f - (float) Math.toDegrees(MathHelper.atan2(rx, ry)), 90.0f);
 
-				this.mob.setAIMoveSpeed((float)speed);
+				this.mob.setAIMoveSpeed((float) speed);
+
+				if(dy >= 0.5D && side == Direction.DOWN) {
+					this.mob.getJumpController().setJumping();
+					this.action = MovementController.Action.JUMPING;
+				}
+			}
+		} else if(this.action == MovementController.Action.JUMPING) {
+			this.mob.setAIMoveSpeed((float) speed);
+
+			if(this.mob.func_233570_aj_()) {
+				this.action = MovementController.Action.WAIT;
 			}
 		} else if(this.action == MovementController.Action.WAIT) {
 			this.mob.setMoveForward(0);

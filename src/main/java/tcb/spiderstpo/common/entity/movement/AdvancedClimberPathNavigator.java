@@ -67,14 +67,6 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		float maxDistanceToWaypointY = Math.max(1 /*required for e.g. slabs*/, this.entity.getHeight() > 0.75F ? this.entity.getHeight() / 2.0F : 0.75F - this.entity.getHeight() / 2.0F);
 		PathPoint currentTarget = this.currentPath.func_237225_h_(); //getCurrentPos
 
-		/*float offsetX = MathHelper.ceil(this.entity.getWidth()) - this.entity.getWidth();
-		float offsetY = MathHelper.ceil(this.entity.getHeight()) - this.entity.getHeight();
-		float offsetZ = offsetX;
-
-		double dx = Math.abs(currentTarget.x - (this.entity.getBoundingBox().minX + offsetX));
-		double dy = Math.abs(currentTarget.y - (this.entity.getBoundingBox().minY + offsetY));
-		double dz = Math.abs(currentTarget.z - (this.entity.getBoundingBox().minZ + offsetZ));*/
-
 		double dx = Math.abs(currentTarget.x + (int)(this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosX());
 		double dy = Math.abs(currentTarget.y - this.entity.getPosY());
 		double dz = Math.abs(currentTarget.z + (int)(this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosZ());
@@ -90,7 +82,23 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 
 		this.verticalFacing = Direction.getFacingFromVector((float)upVector.x, (float)upVector.y, (float)upVector.z);
 
-		if(isWaypointInReach || (this.entity.func_233660_b_(this.currentPath.func_237225_h_().nodeType) && this.isNextTargetInLine(pos, sizeX, sizeY, sizeZ))) {
+		boolean isOnSameSideAsTarget = false;
+		if(currentTarget instanceof DirectionalPathPoint) {
+			DirectionalPathPoint currentDirectionalTarget = (DirectionalPathPoint) currentTarget;
+
+			Direction side = this.climber.getWalkingSide().getLeft();
+
+			for(Direction targetSide : currentDirectionalTarget.directions) {
+				if(targetSide == side) {
+					isOnSameSideAsTarget = true;
+					break;
+				}
+			}
+		} else {
+			isOnSameSideAsTarget = true;
+		}
+
+		if(isOnSameSideAsTarget && (isWaypointInReach || (this.entity.func_233660_b_(this.currentPath.func_237225_h_().nodeType) && this.isNextTargetInLine(pos, sizeX, sizeY, sizeZ)))) {
 			this.currentPath.setCurrentPathIndex(this.currentPath.getCurrentPathIndex() + 1);
 		}
 
