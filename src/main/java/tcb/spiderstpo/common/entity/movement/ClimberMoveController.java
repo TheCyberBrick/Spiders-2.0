@@ -54,7 +54,7 @@ public class ClimberMoveController extends MovementController {
 
 				this.mob.setAIMoveSpeed((float) speed);
 
-				if(dy >= 0.5D && side == Direction.DOWN) {
+				if(this.posY >= this.mob.getPosY() + this.mob.getHeight() && side == Direction.DOWN) {
 					this.mob.getJumpController().setJumping();
 					this.action = MovementController.Action.JUMPING;
 				}
