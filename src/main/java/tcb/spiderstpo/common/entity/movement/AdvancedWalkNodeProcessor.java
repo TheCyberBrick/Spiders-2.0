@@ -516,7 +516,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 	}
 
 	protected boolean isTraversible(DirectionalPathPoint from, DirectionalPathPoint to) {
-		if(this.getCanSwim() && (from.nodeType == PathNodeType.WATER || from.nodeType == PathNodeType.LAVA || to.nodeType == PathNodeType.WATER || to.nodeType == PathNodeType.LAVA)) {
+		if(this.getCanSwim() && (from.nodeType == PathNodeType.WATER || from.nodeType == PathNodeType.WATER_BORDER || from.nodeType == PathNodeType.LAVA || to.nodeType == PathNodeType.WATER || to.nodeType == PathNodeType.WATER_BORDER || to.nodeType == PathNodeType.LAVA)) {
 			//When swimming it can always reach any side
 			return true;
 		}

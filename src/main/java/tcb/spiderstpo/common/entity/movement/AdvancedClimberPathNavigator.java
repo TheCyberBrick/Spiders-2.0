@@ -115,16 +115,16 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		this.verticalFacing = Direction.getFacingFromVector((float) upVector.x, (float) upVector.y, (float) upVector.z);
 
 		boolean isOnSameSideAsTarget = false;
-		if(this.entity.isInWater()) {
+		if(this.getCanSwim() && (currentTarget.nodeType == PathNodeType.WATER || currentTarget.nodeType == PathNodeType.WATER_BORDER || currentTarget.nodeType == PathNodeType.LAVA)) {
 			isOnSameSideAsTarget = true;
 		} else if(currentTarget instanceof DirectionalPathPoint) {
 			PathPoint nextTarget = this.currentPath.getCurrentPathIndex() < this.currentPath.getCurrentPathLength() - 1 ? this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex() + 1) : null;
 
 			Direction[] nextTargetSides;
-			if(nextTarget instanceof DirectionalPathPoint) {
-				nextTargetSides = ((DirectionalPathPoint) nextTarget).directions;
-			} else {
+			if(nextTarget instanceof DirectionalPathPoint == false || nextTarget == null || (this.getCanSwim() && (nextTarget.nodeType == PathNodeType.WATER || nextTarget.nodeType == PathNodeType.WATER_BORDER || nextTarget.nodeType == PathNodeType.LAVA))) {
 				nextTargetSides = null;
+			} else {
+				nextTargetSides = ((DirectionalPathPoint) nextTarget).directions;
 			}
 
 			DirectionalPathPoint currentDirectionalTarget = (DirectionalPathPoint) currentTarget;
