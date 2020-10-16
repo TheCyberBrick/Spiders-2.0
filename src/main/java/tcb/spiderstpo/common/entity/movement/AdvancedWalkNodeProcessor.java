@@ -255,25 +255,25 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		DirectionalPathPoint[] pathsNZ = this.getSafePoints(currentPoint.x, currentPoint.y, currentPoint.z - 1, stepHeight, height, NZ, this.checkObstructions);
 
 		for(int k = 0; k < pathsPZ.length; k++) {
-			if(isSuitablePoint(pathsPZ[k], currentPoint, this.checkObstructions)) {
+			if(this.isSuitablePoint(pathsPZ[k], currentPoint, this.checkObstructions)) {
 				pathOptions[openedNodeCount++] = pathsPZ[k];
 			}
 		}
 
 		for(int k = 0; k < pathsNX.length; k++) {
-			if(isSuitablePoint(pathsNX[k], currentPoint, this.checkObstructions)) {
+			if(this.isSuitablePoint(pathsNX[k], currentPoint, this.checkObstructions)) {
 				pathOptions[openedNodeCount++] = pathsNX[k];
 			}
 		}
 
 		for(int k = 0; k < pathsPX.length; k++) {
-			if(isSuitablePoint(pathsPX[k], currentPoint, this.checkObstructions)) {
+			if(this.isSuitablePoint(pathsPX[k], currentPoint, this.checkObstructions)) {
 				pathOptions[openedNodeCount++] = pathsPX[k];
 			}
 		}
 
 		for(int k = 0; k < pathsNZ.length; k++) {
-			if(isSuitablePoint(pathsNZ[k], currentPoint, this.checkObstructions)) {
+			if(this.isSuitablePoint(pathsNZ[k], currentPoint, this.checkObstructions)) {
 				pathOptions[openedNodeCount++] = pathsNZ[k];
 			}
 		}
@@ -283,7 +283,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 			pathsNY = this.getSafePoints(currentPoint.x, currentPoint.y - 1, currentPoint.z, stepHeight, height, NY, this.checkObstructions);
 
 			for(int k = 0; k < pathsNY.length; k++) {
-				if(isSuitablePoint(pathsNY[k], currentPoint, this.checkObstructions)) {
+				if(this.isSuitablePoint(pathsNY[k], currentPoint, this.checkObstructions)) {
 					pathOptions[openedNodeCount++] = pathsNY[k];
 				}
 			}
@@ -294,7 +294,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 			pathsPY = this.getSafePoints(currentPoint.x, currentPoint.y + 1, currentPoint.z, stepHeight, height, PY, this.checkObstructions);
 
 			for(int k = 0; k < pathsPY.length; k++) {
-				if(isSuitablePoint(pathsPY[k], currentPoint, this.checkObstructions)) {
+				if(this.isSuitablePoint(pathsPY[k], currentPoint, this.checkObstructions)) {
 					pathOptions[openedNodeCount++] = pathsPY[k];
 				}
 			}
@@ -515,7 +515,12 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		return openedNodeCount;
 	}
 
-	protected static boolean isTraversible(DirectionalPathPoint from, DirectionalPathPoint to) {
+	protected boolean isTraversible(DirectionalPathPoint from, DirectionalPathPoint to) {
+		if(this.getCanSwim() && (from.nodeType == PathNodeType.WATER || from.nodeType == PathNodeType.LAVA || to.nodeType == PathNodeType.WATER || to.nodeType == PathNodeType.LAVA)) {
+			//When swimming it can always reach any side
+			return true;
+		}
+
 		boolean dx = (to.x - from.x) != 0;
 		boolean dy = (to.y - from.y) != 0;
 		boolean dz = (to.z - from.z) != 0;
@@ -564,8 +569,8 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		return false;
 	}
 
-	protected static boolean isSuitablePoint(@Nullable DirectionalPathPoint newPoint, DirectionalPathPoint currentPoint, boolean allowObstructions) {
-		return newPoint != null && !newPoint.visited && (allowObstructions || newPoint.costMalus >= 0.0F || currentPoint.costMalus < 0.0F) && isTraversible(currentPoint, newPoint);
+	protected boolean isSuitablePoint(@Nullable DirectionalPathPoint newPoint, DirectionalPathPoint currentPoint, boolean allowObstructions) {
+		return newPoint != null && !newPoint.visited && (allowObstructions || newPoint.costMalus >= 0.0F || currentPoint.costMalus < 0.0F) && this.isTraversible(currentPoint, newPoint);
 	}
 
 	protected boolean isSuitablePoint(@Nullable DirectionalPathPoint[] newPoints1, int np1x, int np1y, int np1z, @Nullable DirectionalPathPoint[] newPoints2, int np2x, int np2y, int np2z, @Nullable DirectionalPathPoint newPointDiagonal, DirectionalPathPoint currentPoint, boolean allowObstructions, boolean fitsThroughPoles, boolean is3DPathing) {
@@ -581,7 +586,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 				}
 			}
 		} else {
-			if(newPointDiagonal != null && !newPointDiagonal.visited && isTraversible(currentPoint, newPointDiagonal)) {
+			if(newPointDiagonal != null && !newPointDiagonal.visited && this.isTraversible(currentPoint, newPointDiagonal)) {
 				long packed2 = this.getDirectionalPathNodeTypeCached(this.entity, np2x, np2y, np2z);
 				PathNodeType pathNodeType2 = unpackNodeType(packed2);
 				boolean open2 = (pathNodeType2 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WALKABLE);
