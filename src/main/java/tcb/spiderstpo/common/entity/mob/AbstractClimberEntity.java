@@ -89,7 +89,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 	protected float collisionsSmoothingRange = 1.25f;
 
 	protected Orientation orientation;
-	protected Pair<Direction, Vector3d> walkingSide;
+	protected Pair<Direction, Vector3d> groundDirecton;
 
 	private float nextStepDistance, nextFlap;
 	private Vector3d preWalkingPosition;
@@ -98,7 +98,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		super(type, world);
 		this.stepHeight = 0.1f;
 		this.orientation = this.calculateOrientation(1);
-		this.walkingSide = this.getWalkingSide();
+		this.groundDirecton = this.getGroundDirection();
 		this.moveController = new ClimberMoveController(this);
 		this.lookController = new ClimberLookController(this);
 	}
@@ -262,16 +262,21 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		}
 
 		if(closestFacing == null) {
-			this.walkingSide = Pair.of(Direction.DOWN, new Vector3d(0, -1, 0));
+			this.groundDirecton = Pair.of(Direction.DOWN, new Vector3d(0, -1, 0));
 		} else {
-			this.walkingSide = Pair.of(closestFacing, weighting.normalize().add(0, -0.001f, 0).normalize());
+			this.groundDirecton = Pair.of(closestFacing, weighting.normalize().add(0, -0.001f, 0).normalize());
 		}
 	}
 
-	public Pair<Direction, Vector3d> getWalkingSide() {
-		return this.walkingSide;
+	public Pair<Direction, Vector3d> getGroundDirection() {
+		return this.groundDirecton;
 	}
 
+	@Override
+	public Direction getGroundSide() {
+		return this.groundDirecton.getKey();
+	}
+	
 	public static class Orientation {
 		public final Vector3d normal, localZ, localY, localX;
 		public final float componentZ, componentY, componentX, yaw, pitch;
@@ -668,9 +673,9 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		Vector3d forwardVector = orientation.getDirection(this.rotationYaw, 0);
 		Vector3d upVector = orientation.getDirection(this.rotationYaw, -90);
 
-		Pair<Direction, Vector3d> walkingSide = this.getWalkingSide();
+		Pair<Direction, Vector3d> groundDirection = this.getGroundDirection();
 
-		Vector3d stickingForce = this.getStickingForce(walkingSide);
+		Vector3d stickingForce = this.getStickingForce(groundDirection);
 
 		float forward = (float) relative.z;
 
@@ -678,7 +683,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 			float slipperiness = 0.91f;
 
 			if(this.onGround) {
-				BlockPos offsetPos = new BlockPos(this.getPositionVec()).offset(walkingSide.getLeft());
+				BlockPos offsetPos = new BlockPos(this.getPositionVec()).offset(groundDirection.getLeft());
 				slipperiness = this.getBlockSlipperiness(offsetPos);
 			}
 
@@ -751,7 +756,7 @@ public abstract class AbstractClimberEntity extends CreatureEntity implements IA
 		if(this.onGround) {
 			this.fallDistance = 0;
 
-			BlockPos offsetPos = new BlockPos(this.getPositionVec()).offset(walkingSide.getLeft());
+			BlockPos offsetPos = new BlockPos(this.getPositionVec()).offset(groundDirection.getLeft());
 			slipperiness = this.getBlockSlipperiness(offsetPos);
 		}
 

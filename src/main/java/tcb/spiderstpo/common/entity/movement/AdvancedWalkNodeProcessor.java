@@ -168,28 +168,60 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 			--by;
 		}
 
-		BlockPos startPos = new BlockPos(x, y, z);
+		final BlockPos initialStartPos = new BlockPos(x, by, z);
+		BlockPos startPos = initialStartPos;
 
-		PathNodeType startNodeType = this.getPathNodeTypeCached(this.entity, new BlockPos(startPos.getX(), by, startPos.getZ()));
-		if(this.entity.getPathPriority(startNodeType) < 0.0F) {
+		long packed = this.getDirectionalPathNodeTypeCached(this.entity, startPos.getX(), startPos.getY(), startPos.getZ());
+		DirectionalPathPoint startPathPoint = this.openPoint(startPos.getX(), startPos.getY(), startPos.getZ(), packed);
+		startPathPoint.nodeType = unpackNodeType(packed);
+		startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
+
+		startPos = this.findSuitableStartingPosition(startPos, startPathPoint);
+
+		if(!initialStartPos.equals(startPos)) {
+			packed = this.getDirectionalPathNodeTypeCached(this.entity, startPos.getX(), startPos.getY(), startPos.getZ());
+			startPathPoint = this.openPoint(startPos.getX(), startPos.getY(), startPos.getZ(), packed);
+			startPathPoint.nodeType = unpackNodeType(packed);
+			startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
+		}
+
+		if(this.entity.getPathPriority(startPathPoint.nodeType) < 0.0F) {
 			AxisAlignedBB aabb = this.entity.getBoundingBox();
 
 			if(this.isSafeStartingPosition(checkPos.setPos(aabb.minX, by, aabb.minZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.minX, by, aabb.maxZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.maxX, by, aabb.minZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.maxX, by, aabb.maxZ))) {
-				PathPoint startPathPoint = this.func_237223_a_(checkPos);
-				startPathPoint.nodeType = this.getPathNodeTypeCached(this.entity, startPathPoint.func_224759_a());
+				packed = this.getDirectionalPathNodeTypeCached(this.entity, checkPos.getX(), checkPos.getY(), checkPos.getZ());
+				startPathPoint = this.openPoint(checkPos.getX(), checkPos.getY(), checkPos.getZ(), packed);
+				startPathPoint.nodeType = unpackNodeType(packed);
 				startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
-				return startPathPoint;
 			}
 		}
 
-		PathPoint startPathPoint = this.openPoint(startPos.getX(), by, startPos.getZ());
-		startPathPoint.nodeType = this.getPathNodeTypeCached(this.entity, startPathPoint.func_224759_a());
-		startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
 		return startPathPoint;
 	}
 
+	protected BlockPos findSuitableStartingPosition(BlockPos pos, DirectionalPathPoint startPathPoint) {
+		if(startPathPoint.directions.length == 0) {
+			Direction avoidedOffset = this.advancedPathFindingEntity.getGroundSide().getOpposite();
+
+			for(Direction offset : DIRECTIONS) {
+				if(offset != avoidedOffset) {
+					BlockPos offsetPos = pos.offset(offset);
+
+					long packed = this.getDirectionalPathNodeTypeCached(this.entity, offsetPos.getX(), offsetPos.getY(), offsetPos.getZ());
+					PathNodeType nodeType = unpackNodeType(packed);
+
+					if(nodeType == PathNodeType.WALKABLE && unpackDirection(packed)) {
+						return offsetPos;
+					}
+				}
+			}
+		}
+
+		return pos;
+	}
+
 	private boolean isSafeStartingPosition(BlockPos pos) {
-		PathNodeType pathnodetype = this.getPathNodeTypeCached(this.entity, pos);
+		PathNodeType pathnodetype = unpackNodeType(this.getDirectionalPathNodeTypeCached(this.entity, pos.getX(), pos.getY(), pos.getZ()));
 		return this.entity.getPathPriority(pathnodetype) >= 0.0F;
 	}
 
@@ -484,30 +516,31 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 	}
 
 	protected static boolean isTraversible(DirectionalPathPoint from, DirectionalPathPoint to) {
+		boolean dx = (to.x - from.x) != 0;
+		boolean dy = (to.y - from.y) != 0;
+		boolean dz = (to.z - from.z) != 0;
+
+		boolean isDiagonal = (dx ? 1 : 0) + (dy ? 1 : 0) + (dz ? 1 : 0) > 1;
+
 		for(int i = 0; i < from.directions.length; i++) {
 			Direction d1 = from.directions[i];
 
 			for(int j = 0; j < to.directions.length; j++) {
 				Direction d2 = to.directions[j];
 
-				if(d1 == d2 || d1.getAxis() != d2.getAxis()) {
+				if(d1 == d2) {
 					return true;
-				}
-			}
-		}
+				} else if(isDiagonal) {
+					Axis a1 = d1.getAxis();
+					Axis a2 = d2.getAxis();
 
-		return false;
-	}
-
-	protected static boolean isTraversible(DirectionalPathPoint from, long to) {
-		for(int i = 0; i < from.directions.length; i++) {
-			Direction d1 = from.directions[i];
-
-			for(int j = 0; j < DIRECTIONS.length; j++) {
-				Direction d2 = DIRECTIONS[j];
-
-				if(unpackDirection(d2, to) && (d1 == d2 || d1.getAxis() != d2.getAxis())) {
-					return true;
+					if((a1 == Axis.X && a2 == Axis.Y) || (a1 == Axis.Y && a2 == Axis.X)) {
+						return !dz;
+					} else if((a1 == Axis.X && a2 == Axis.Z) || (a1 == Axis.Z && a2 == Axis.X)) {
+						return !dy;
+					} else if((a1 == Axis.Z && a2 == Axis.Y) || (a1 == Axis.Y && a2 == Axis.Z)) {
+						return !dx;
+					}
 				}
 			}
 		}
@@ -531,18 +564,6 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		return false;
 	}
 
-	protected static boolean isSharingDirection(DirectionalPathPoint from, long to) {
-		for(int i = 0; i < from.directions.length; i++) {
-			Direction d = from.directions[i];
-
-			if(unpackDirection(d, to)) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
 	protected static boolean isSuitablePoint(@Nullable DirectionalPathPoint newPoint, DirectionalPathPoint currentPoint, boolean allowObstructions) {
 		return newPoint != null && !newPoint.visited && (allowObstructions || newPoint.costMalus >= 0.0F || currentPoint.costMalus < 0.0F) && isTraversible(currentPoint, newPoint);
 	}
@@ -557,47 +578,23 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 									((newPoints2[0] != null && (allowObstructions || newPoints2[0].costMalus >= 0.0F)) || (newPoints2.length > 1 && newPoints2[1] != null && (allowObstructions || newPoints2[1].costMalus >= 0.0F))) &&
 									((newPoints1[0] != null && (allowObstructions || newPoints1[0].costMalus >= 0.0F)) || (newPoints1.length > 1 && newPoints1[1] != null && (allowObstructions || newPoints1[1].costMalus >= 0.0F)))
 									));
-				} else {
-					return false;
 				}
-			} else {
-				return false;
 			}
 		} else {
 			if(newPointDiagonal != null && !newPointDiagonal.visited && isTraversible(currentPoint, newPointDiagonal)) {
-				DirectionalPathPoint newPoint21 = newPoints2 != null && newPoints2.length >= 1 ? newPoints2[0] : null;
-				DirectionalPathPoint newPoint22 = newPoints2 != null && newPoints2.length >= 2 ? newPoints2[1] : null;
-				DirectionalPathPoint newPoint11 = newPoints1 != null && newPoints1.length >= 1 ? newPoints1[0] : null;
-				DirectionalPathPoint newPoint12 = newPoints1 != null && newPoints1.length >= 2 ? newPoints1[1] : null;
-
-				boolean isSharingDirectionWithCurrent = isSharingDirection(newPointDiagonal, currentPoint);
-
-				if(allowObstructions || (newPointDiagonal.costMalus >= 0.0f && (
-						(newPoint21 != null && (newPoint21.costMalus >= 0.0f || newPoint21.nodeType == PathNodeType.OPEN) && (isSharingDirectionWithCurrent || isSharingDirection(newPointDiagonal, newPoint21))) ||
-						(newPoint22 != null && (newPoint22.costMalus >= 0.0f || newPoint22.nodeType == PathNodeType.OPEN) && (isSharingDirectionWithCurrent || isSharingDirection(newPointDiagonal, newPoint22))) ||
-						(newPoint11 != null && (newPoint11.costMalus >= 0.0f || newPoint11.nodeType == PathNodeType.OPEN) && (isSharingDirectionWithCurrent || isSharingDirection(newPointDiagonal, newPoint11))) ||
-						(newPoint12 != null && (newPoint12.costMalus >= 0.0f || newPoint12.nodeType == PathNodeType.OPEN) && (isSharingDirectionWithCurrent || isSharingDirection(newPointDiagonal, newPoint12)))
-						))) {
-					return true;
-				}
-
 				long packed2 = this.getDirectionalPathNodeTypeCached(this.entity, np2x, np2y, np2z);
 				PathNodeType pathNodeType2 = unpackNodeType(packed2);
-				if((pathNodeType2 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WALKABLE) && (isSharingDirectionWithCurrent || isSharingDirection(newPointDiagonal, packed2))) {
-					return true;
-				}
+				boolean open2 = (pathNodeType2 == PathNodeType.OPEN || pathNodeType2 == PathNodeType.WALKABLE);
 
 				long packed1 = this.getDirectionalPathNodeTypeCached(this.entity, np1x, np1y, np1z);
 				PathNodeType pathNodeType1 = unpackNodeType(packed1);
-				if((pathNodeType1 == PathNodeType.OPEN || pathNodeType1 == PathNodeType.WALKABLE) && (isSharingDirectionWithCurrent || isSharingDirection(newPointDiagonal, packed1))) {
-					return true;
-				}
+				boolean open1 = (pathNodeType1 == PathNodeType.OPEN || pathNodeType1 == PathNodeType.WALKABLE);
 
-				return false;
-			} else {
-				return false;
+				return (open1 != open2) || (open1 == true && open2 == true && isSharingDirection(newPointDiagonal, currentPoint));
 			}
 		}
+
+		return false;
 	}
 
 	protected DirectionalPathPoint openPoint(int x, int y, int z, long packed) {
@@ -800,10 +797,6 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		}
 	}
 
-	protected PathNodeType getPathNodeTypeCached(MobEntity entitylivingIn, BlockPos pos) {
-		return unpackNodeType(this.getDirectionalPathNodeTypeCached(entitylivingIn, pos.getX(), pos.getY(), pos.getZ()));
-	}
-
 	protected long getDirectionalPathNodeTypeCached(MobEntity entitylivingIn, int x, int y, int z) {
 		return this.pathNodeTypeCache.computeIfAbsent(BlockPos.pack(x, y, z), (key) -> {
 			return this.getDirectionalPathNodeType(this.blockaccess, x, y, z, entitylivingIn, this.entitySizeX, this.entitySizeY, this.entitySizeZ, this.getCanOpenDoors(), this.getCanEnterDoors());
@@ -820,6 +813,10 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 
 	static boolean unpackDirection(Direction facing, long packed) {
 		return (packed & (1 << facing.ordinal())) != 0;
+	}
+
+	static boolean unpackDirection(long packed) {
+		return (packed & 0xFFFFFFFF) != 0;
 	}
 
 	static long packNodeType(PathNodeType type, long packed) {

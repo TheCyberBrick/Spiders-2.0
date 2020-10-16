@@ -32,11 +32,11 @@ public class ClimberMoveController extends MovementController {
 			int entitySizeY = MathHelper.floor(this.mob.getHeight() + 1.0F);
 			int entitySizeZ = MathHelper.floor(this.mob.getWidth() + 1.0F);
 
-			Direction side = this.climber.getWalkingSide().getLeft();
+			Direction groundSide = this.climber.getGroundDirection().getLeft();
 
-			double dx = (this.posX + Math.max(0, side.getXOffset()) * (entitySizeX - 1) + side.getXOffset() * 0.5f) - this.mob.getPosX();
-			double dy = (this.posY + Math.max(0, side.getYOffset()) * (entitySizeY - 1) + side.getYOffset() * 0.5f) - this.mob.getPosY();
-			double dz = (this.posZ + Math.max(0, side.getZOffset()) * (entitySizeZ - 1) + side.getZOffset() * 0.5f) - this.mob.getPosZ();
+			double dx = (this.posX + Math.max(0, groundSide.getXOffset()) * (entitySizeX - 1) + groundSide.getXOffset() * 0.5f) - this.mob.getPosX();
+			double dy = (this.posY + Math.max(0, groundSide.getYOffset()) * (entitySizeY - 1) + groundSide.getYOffset() * 0.5f) - this.mob.getPosY();
+			double dz = (this.posZ + Math.max(0, groundSide.getZOffset()) * (entitySizeZ - 1) + groundSide.getZOffset() * 0.5f) - this.mob.getPosZ();
 
 			Vector3d offset = new Vector3d(dx, dy, dz);
 
@@ -54,7 +54,7 @@ public class ClimberMoveController extends MovementController {
 
 				this.mob.setAIMoveSpeed((float) speed);
 
-				if(this.posY >= this.mob.getPosY() + this.mob.getHeight() && side == Direction.DOWN) {
+				if(this.posY >= this.mob.getPosY() + this.mob.getHeight() && groundSide == Direction.DOWN) {
 					this.mob.getJumpController().setJumping();
 					this.action = MovementController.Action.JUMPING;
 				}

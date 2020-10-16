@@ -1,5 +1,7 @@
 package tcb.spiderstpo.common.entity.movement;
 
+import java.util.Arrays;
+
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
@@ -114,14 +116,30 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 
 		boolean isOnSameSideAsTarget = false;
 		if(currentTarget instanceof DirectionalPathPoint) {
+			PathPoint nextTarget = this.currentPath.getCurrentPathIndex() < this.currentPath.getCurrentPathLength() - 1 ? this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex() + 1) : null;
+
+			Direction[] nextTargetSides;
+			if(nextTarget instanceof DirectionalPathPoint) {
+				nextTargetSides = ((DirectionalPathPoint) nextTarget).directions;
+			} else {
+				nextTargetSides = null;
+			}
+
 			DirectionalPathPoint currentDirectionalTarget = (DirectionalPathPoint) currentTarget;
 
-			Direction side = this.climber.getWalkingSide().getLeft();
+			Direction groundSide = this.climber.getGroundDirection().getLeft();
 
 			for(Direction targetSide : currentDirectionalTarget.directions) {
-				if(targetSide == side) {
-					isOnSameSideAsTarget = true;
-					break;
+				if(targetSide == groundSide) {
+					boolean isCompatibleWithNextTarget = nextTargetSides == null ||
+							Arrays.stream(nextTargetSides).anyMatch(nextTargetSide -> {
+								return (targetSide == nextTargetSide || targetSide.getAxis() != nextTargetSide.getAxis());
+							});
+
+					if(isCompatibleWithNextTarget) {
+						isOnSameSideAsTarget = true;
+						break;
+					}
 				}
 			}
 		} else {

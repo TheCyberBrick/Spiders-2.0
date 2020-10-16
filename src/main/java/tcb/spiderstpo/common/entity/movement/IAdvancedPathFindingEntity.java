@@ -14,6 +14,14 @@ import net.minecraft.world.IBlockReader;
 
 public interface IAdvancedPathFindingEntity {
 	/**
+	 * The side on which the entity is currently walking
+	 * @return
+	 */
+	public default Direction getGroundSide() {
+		return Direction.DOWN;
+	}
+	
+	/**
 	 * Called when the mob tries to move along the path but is obstructed
 	 */
 	public void onPathingObstructed(Direction facing);
