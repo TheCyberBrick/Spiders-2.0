@@ -28,11 +28,11 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 	}
 
 	public BetterCaveSpiderEntity(World world) {
-		super(SpiderMod.BETTER_CAVE_SPIDER.get(), world);
+		this(SpiderMod.BETTER_CAVE_SPIDER.get(), world);
 	}
 
 	public static AttributeModifierMap.MutableAttribute getAttributeMap() {
-		return BetterSpiderEntity.getAttributeMap().func_233815_a_(Attributes.field_233818_a_, 12.0D);
+		return BetterSpiderEntity.getAttributeMap().func_233815_a_(Attributes.field_233818_a_ /*max health*/, 12.0f);
 	}
 
 	@Override
@@ -42,7 +42,7 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 
 	@Override
 	public float getVerticalOffset(float partialTicks) {
-		return 0.225f;
+		return 0.05f;
 	}
 
 	@Override
@@ -57,12 +57,12 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 				int i = 0;
 				if(this.world.getDifficulty() == Difficulty.NORMAL) {
 					i = 7;
-				} else if (this.world.getDifficulty() == Difficulty.HARD) {
+				} else if(this.world.getDifficulty() == Difficulty.HARD) {
 					i = 15;
 				}
 
 				if(i > 0) {
-					((LivingEntity)entityIn).addPotionEffect(new EffectInstance(Effects.POISON, i * 20, 0));
+					((LivingEntity) entityIn).addPotionEffect(new EffectInstance(Effects.POISON, i * 20, 0));
 				}
 			}
 
@@ -75,6 +75,11 @@ public class BetterCaveSpiderEntity extends BetterSpiderEntity {
 	@Override
 	@Nullable
 	public ILivingEntityData onInitialSpawn(IWorld worldIn, DifficultyInstance difficultyIn, SpawnReason reason, @Nullable ILivingEntityData spawnDataIn, @Nullable CompoundNBT dataTag) {
+		//Increase vanilla spider follow range to 24
+		if(this.getAttribute(Attributes.field_233819_b_).getBaseValue() == 16.0D) {
+			this.getAttribute(Attributes.field_233819_b_).setBaseValue(24.0D);
+		}
+
 		return spawnDataIn;
 	}
 

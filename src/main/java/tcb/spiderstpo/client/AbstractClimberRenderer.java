@@ -11,7 +11,6 @@ import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.client.renderer.entity.model.EntityModel;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Matrix4f;
 import net.minecraft.util.math.vector.Vector3f;
 import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
@@ -23,7 +22,7 @@ public abstract class AbstractClimberRenderer<T extends AbstractClimberEntity, M
 
 	@Override
 	public void render(T entity, float entityYaw, float partialTicks, MatrixStack matrixStackIn, IRenderTypeBuffer bufferIn, int packedLightIn) {
-		AbstractClimberEntity.Orientation orientation = entity.getOrientation(partialTicks);
+		AbstractClimberEntity.Orientation orientation = entity.calculateOrientation(partialTicks);
 
 		float verticalOffset = entity.getVerticalOffset(partialTicks);
 
@@ -62,18 +61,18 @@ public abstract class AbstractClimberRenderer<T extends AbstractClimberEntity, M
 			builder.pos(matrix4f, (float) orientation.normal.x * 2, (float) orientation.normal.y * 2, (float) orientation.normal.z * 2).color(1.0f, 0.0f, 1.0f, 1.0f).endVertex();
 
 			WorldRenderer.drawBoundingBox(matrixStackIn, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(0, 0, 0, 0, 0, 0).offset((float) orientation.normal.x * 2, (float) orientation.normal.y * 2, (float) orientation.normal.z * 2).grow(0.025f), 1.0f, 0.0f, 1.0f, 1.0f);
-			
+
 			matrixStackIn.push();
 
 			matrixStackIn.translate(-rox, -roy, -roz);
-			
+
 			matrix4f = matrixStackIn.getLast().getMatrix();
-			
+
 			builder.pos(matrix4f, 0, entity.getHeight() * 0.5f, 0).color(0, 1, 1, 1).endVertex();
 			builder.pos(matrix4f, (float) orientation.localX.x, entity.getHeight() * 0.5f + (float) orientation.localX.y, (float) orientation.localX.z).color(1.0f, 0.0f, 0.0f, 1.0f).endVertex();
 
 			WorldRenderer.drawBoundingBox(matrixStackIn, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(0, 0, 0, 0, 0, 0).offset((float) orientation.localX.x, entity.getHeight() * 0.5f + (float) orientation.localX.y, (float) orientation.localX.z).grow(0.025f), 1.0f, 0.0f, 0.0f, 1.0f);
-			
+
 			builder.pos(matrix4f, 0, entity.getHeight() * 0.5f, 0).color(0, 1, 1, 1).endVertex();
 			builder.pos(matrix4f, (float) orientation.localY.x, entity.getHeight() * 0.5f + (float) orientation.localY.y, (float) orientation.localY.z).color(0.0f, 1.0f, 0.0f, 1.0f).endVertex();
 
@@ -83,7 +82,7 @@ public abstract class AbstractClimberRenderer<T extends AbstractClimberEntity, M
 			builder.pos(matrix4f, (float) orientation.localZ.x, entity.getHeight() * 0.5f + (float) orientation.localZ.y, (float) orientation.localZ.z).color(0.0f, 0.0f, 1.0f, 1.0f).endVertex();
 
 			WorldRenderer.drawBoundingBox(matrixStackIn, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(0, 0, 0, 0, 0, 0).offset((float) orientation.localZ.x, entity.getHeight() * 0.5f + (float) orientation.localZ.y, (float) orientation.localZ.z).grow(0.025f), 0.0f, 0.0f, 1.0f, 1.0f);
-		
+
 			matrixStackIn.pop();
 		}
 
@@ -92,9 +91,9 @@ public abstract class AbstractClimberRenderer<T extends AbstractClimberEntity, M
 
 	@Override
 	protected void applyRotations(T entity, MatrixStack matrixStackIn, float ageInTicks, float rotationYaw, float partialTicks) {
-		AbstractClimberEntity.Orientation orientation = entity.getOrientation(1);
-		
-		AbstractClimberEntity.Orientation interpolatedOrientation = entity.getOrientation(partialTicks);
+		AbstractClimberEntity.Orientation orientation = entity.getOrientation();
+
+		AbstractClimberEntity.Orientation interpolatedOrientation = entity.calculateOrientation(partialTicks);
 
 		matrixStackIn.rotate(Vector3f.YP.rotationDegrees(interpolatedOrientation.yaw));
 		matrixStackIn.rotate(Vector3f.XP.rotationDegrees(interpolatedOrientation.pitch));
