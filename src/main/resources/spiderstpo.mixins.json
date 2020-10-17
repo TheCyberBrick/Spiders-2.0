@@ -1,0 +1,15 @@
+{
+  "minVersion": "0.8",
+  "required": true,
+  "compatibilityLevel": "JAVA_8",
+  "refmap": "spiderstpo.refmap.json",
+  "package": "tcb.spiderstpo.mixins",
+  "mixins": [
+    "SpiderEntityMixin"
+  ],
+  "client": [
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,17 +1,20 @@
 buildscript {
     repositories {
         maven { url = 'https://files.minecraftforge.net/maven' }
+        maven { url = 'https://repo.spongepowered.org/maven' }
         jcenter()
         mavenCentral()
     }
     dependencies {
         classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+        classpath group: 'org.spongepowered', name: 'mixingradle', version: '0.7-SNAPSHOT'
     }
 }
 apply plugin: 'net.minecraftforge.gradle'
 // Only edit below this line, the above code adds and enables the necessary things for Forge to be setup.
 apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
+apply plugin: 'org.spongepowered.mixin'
 
 version = '1.0.2'
 group = 'tcb.spiderstpo'
@@ -43,6 +46,8 @@ minecraft {
             // Recommended logging level for the console
             property 'forge.logging.console.level', 'debug'
 
+            arg "-mixin.config=spiderstpo.mixins.json"
+
             mods {
                 spiderstpo {
                     source sourceSets.main
@@ -58,6 +63,8 @@ minecraft {
 
             // Recommended logging level for the console
             property 'forge.logging.console.level', 'debug'
+
+            arg "-mixin.config=spiderstpo.mixins.json"
 
             mods {
                 spiderstpo {
@@ -84,6 +91,10 @@ minecraft {
             }
         }
     }
+}
+
+mixin {
+    add sourceSets.main, "spiderstpo.refmap.json"
 }
 
 dependencies {
