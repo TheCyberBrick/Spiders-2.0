@@ -5,7 +5,8 @@
   "refmap": "spiderstpo.refmap.json",
   "package": "tcb.spiderstpo.mixins",
   "mixins": [
-    "SpiderEntityMixin"
+    "ClimberEntityMixin",
+    "BetterSpiderEntityMixin"
   ],
   "client": [
   ],
