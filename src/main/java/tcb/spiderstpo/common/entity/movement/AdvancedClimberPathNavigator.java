@@ -8,6 +8,7 @@ import com.google.common.collect.ImmutableSet;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.MobEntity;
 import net.minecraft.network.DebugPacketSender;
 import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathNodeType;
@@ -18,10 +19,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
-import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
+import tcb.spiderstpo.common.entity.mob.IClimberEntity;
+import tcb.spiderstpo.common.entity.mob.Orientation;
 
-public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> extends AdvancedGroundPathNavigator<T> {
-	protected final AbstractClimberEntity climber;
+public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> extends AdvancedGroundPathNavigator<T> {
+	protected final IClimberEntity climber;
 
 	protected Direction verticalFacing = Direction.DOWN;
 
@@ -109,8 +111,8 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		int sizeY = MathHelper.ceil(this.entity.getHeight());
 		int sizeZ = sizeX;
 
-		AbstractClimberEntity.Orientation orientation = this.climber.getOrientation();
-		Vector3d upVector = orientation.getDirection(this.climber.rotationYaw, -90);
+		Orientation orientation = this.climber.getOrientation();
+		Vector3d upVector = orientation.getGlobal(this.entity.rotationYaw, -90);
 
 		this.verticalFacing = Direction.getFacingFromVector((float) upVector.x, (float) upVector.y, (float) upVector.z);
 
