@@ -1,9 +1,16 @@
 package tcb.spiderstpo.common.entity.movement;
 
+import java.util.Arrays;
+
+import javax.annotation.Nullable;
+
 import com.google.common.collect.ImmutableSet;
+
 import net.minecraft.block.BlockState;
 import net.minecraft.dispenser.IPosition;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.MobEntity;
+import net.minecraft.network.DebugPacketSender;
 import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.pathfinding.PathPoint;
@@ -13,12 +20,11 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
-import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
+import tcb.spiderstpo.common.entity.mob.IClimberEntity;
+import tcb.spiderstpo.common.entity.mob.Orientation;
 
-import javax.annotation.Nullable;
-
-public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> extends AdvancedGroundPathNavigator<T> {
-	protected final AbstractClimberEntity climber;
+public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> extends AdvancedGroundPathNavigator<T> {
+	protected final IClimberEntity climber;
 
 	protected Direction verticalFacing = Direction.DOWN;
 
@@ -30,8 +36,7 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		this.climber = entity;
 
 		if(this.nodeProcessor instanceof AdvancedWalkNodeProcessor) {
-			@SuppressWarnings("unchecked")
-			AdvancedWalkNodeProcessor<T> processor = (AdvancedWalkNodeProcessor<T>) this.nodeProcessor;
+			AdvancedWalkNodeProcessor processor = (AdvancedWalkNodeProcessor) this.nodeProcessor;
 			processor.setStartPathOnGround(false);
 			processor.setCanPathWalls(canPathWalls);
 			processor.setCanPathCeiling(canPathCeiling);
@@ -101,20 +106,41 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 	}
 
 	@Override
+	public void tick() {
+		++this.totalTicks;
+
+		if(this.tryUpdatePath) {
+			this.updatePath();
+		}
+
+		if(!this.noPath()) {
+			if(this.canNavigate()) {
+				this.pathFollow();
+			} else if(this.currentPath != null && !this.currentPath.isFinished()) {
+				Vec3d pos = this.getEntityPosition();
+				Vec3d targetPos = this.currentPath.getPosition(this.entity);
+
+				if(pos.y > targetPos.y && !this.entity.onGround && MathHelper.floor(pos.x) == MathHelper.floor(targetPos.x) && MathHelper.floor(pos.z) == MathHelper.floor(targetPos.z)) {
+					this.currentPath.incrementPathIndex();
+				}
+			}
+
+			DebugPacketSender.sendPath(this.world, this.entity, this.currentPath, this.maxDistanceToWaypoint);
+
+			if(!this.noPath()) {
+				Vec3d targetPos = this.currentPath.getPosition(this.entity);
+				this.entity.getMoveHelper().setMoveTo(targetPos.x, targetPos.y, targetPos.z, this.speed); //Don't offset to ground pos
+			}
+		}
+	}
+
+	@Override
 	protected void pathFollow() {
 		Vec3d pos = this.getEntityPosition();
 
 		this.maxDistanceToWaypoint = this.entity.getWidth() > 0.75F ? this.entity.getWidth() / 2.0F : 0.75F - this.entity.getWidth() / 2.0F;
 		float maxDistanceToWaypointY = Math.max(1 /*required for e.g. slabs*/, this.entity.getHeight() > 0.75F ? this.entity.getHeight() / 2.0F : 0.75F - this.entity.getHeight() / 2.0F);
-		Vec3d currentTarget = this.currentPath.getCurrentPos(); //getCurrentPos
-
-		/*float offsetX = MathHelper.ceil(this.entity.getWidth()) - this.entity.getWidth();
-		float offsetY = MathHelper.ceil(this.entity.getHeight()) - this.entity.getHeight();
-		float offsetZ = offsetX;
-		
-		double dx = Math.abs(currentTarget.x - (this.entity.getBoundingBox().minX + offsetX));
-		double dy = Math.abs(currentTarget.y - (this.entity.getBoundingBox().minY + offsetY));
-		double dz = Math.abs(currentTarget.z - (this.entity.getBoundingBox().minZ + offsetZ));*/
+		PathPoint currentTarget = this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex());
 
 		double dx = Math.abs(currentTarget.x + (int) (this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosX());
 		double dy = Math.abs(currentTarget.y - this.entity.getPosY());
@@ -126,12 +152,46 @@ public class AdvancedClimberPathNavigator<T extends AbstractClimberEntity> exten
 		int sizeY = MathHelper.ceil(this.entity.getHeight());
 		int sizeZ = sizeX;
 
-		AbstractClimberEntity.Orientation orientation = this.climber.getOrientation(1);
-		Vec3d upVector = orientation.getDirection(this.climber.rotationYaw, -90);
+		Orientation orientation = this.climber.getOrientation();
+		Vec3d upVector = orientation.getGlobal(this.entity.rotationYaw, -90);
 
 		this.verticalFacing = Direction.getFacingFromVector((float) upVector.x, (float) upVector.y, (float) upVector.z);
 
-		if(isWaypointInReach || (canPass(this.currentPath.getFinalPathPoint().nodeType) && this.isNextTargetInLine(pos, sizeX, sizeY, sizeZ))) {
+		boolean isOnSameSideAsTarget = false;
+		if(this.getCanSwim() && (currentTarget.nodeType == PathNodeType.WATER || currentTarget.nodeType == PathNodeType.WATER_BORDER || currentTarget.nodeType == PathNodeType.LAVA)) {
+			isOnSameSideAsTarget = true;
+		} else if(currentTarget instanceof DirectionalPathPoint) {
+			PathPoint nextTarget = this.currentPath.getCurrentPathIndex() < this.currentPath.getCurrentPathLength() - 1 ? this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex() + 1) : null;
+
+			Direction[] nextTargetSides;
+			if(nextTarget instanceof DirectionalPathPoint == false || nextTarget == null || (this.getCanSwim() && (nextTarget.nodeType == PathNodeType.WATER || nextTarget.nodeType == PathNodeType.WATER_BORDER || nextTarget.nodeType == PathNodeType.LAVA))) {
+				nextTargetSides = null;
+			} else {
+				nextTargetSides = ((DirectionalPathPoint) nextTarget).directions;
+			}
+
+			DirectionalPathPoint currentDirectionalTarget = (DirectionalPathPoint) currentTarget;
+
+			Direction groundSide = this.climber.getGroundDirection().getLeft();
+
+			for(Direction targetSide : currentDirectionalTarget.directions) {
+				if(targetSide == groundSide) {
+					boolean isCompatibleWithNextTarget = nextTargetSides == null ||
+							Arrays.stream(nextTargetSides).anyMatch(nextTargetSide -> {
+								return (targetSide == nextTargetSide || targetSide.getAxis() != nextTargetSide.getAxis());
+							});
+
+					if(isCompatibleWithNextTarget) {
+						isOnSameSideAsTarget = true;
+						break;
+					}
+				}
+			}
+		} else {
+			isOnSameSideAsTarget = true;
+		}
+
+		if(isOnSameSideAsTarget && (isWaypointInReach || this.isNextTargetInLine(pos, sizeX, sizeY, sizeZ))) {
 			this.currentPath.setCurrentPathIndex(this.currentPath.getCurrentPathIndex() + 1);
 		}
 

@@ -1,8 +1,17 @@
 package tcb.spiderstpo.common.entity.movement;
 
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.annotation.Nullable;
+
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.MobEntity;
-import net.minecraft.pathfinding.*;
+import net.minecraft.pathfinding.GroundPathNavigator;
+import net.minecraft.pathfinding.Path;
+import net.minecraft.pathfinding.PathFinder;
+import net.minecraft.pathfinding.PathNodeType;
+import net.minecraft.pathfinding.PathType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -11,17 +20,16 @@ import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.math.shapes.ISelectionContext;
 import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.world.World;
+import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 
-import javax.annotation.Nullable;
-import java.util.HashSet;
-import java.util.Set;
-
-public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFindingEntity> extends GroundPathNavigator {
-	protected final T obstructionAwareEntity;
-	protected final boolean checkObstructions;
+public class AdvancedGroundPathNavigator<T extends MobEntity & IClimberEntity> extends GroundPathNavigator {
 	protected CustomPathFinder pathFinder;
 	protected long lastTimeUpdated;
 	protected BlockPos targetPos;
+
+	protected final T advancedPathFindingEntity;
+	protected final boolean checkObstructions;
+
 	protected int stuckCheckTicks = 0;
 
 	protected int checkpointRange;
@@ -30,15 +38,13 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFind
 		this(entity, worldIn, true);
 	}
 
-	@SuppressWarnings("unchecked")
 	public AdvancedGroundPathNavigator(T entity, World worldIn, boolean checkObstructions) {
 		super(entity, worldIn);
-		this.obstructionAwareEntity = entity;
+		this.advancedPathFindingEntity = entity;
 		this.checkObstructions = checkObstructions;
 
 		if(this.nodeProcessor instanceof AdvancedWalkNodeProcessor) {
-			AdvancedWalkNodeProcessor<T> processor = (AdvancedWalkNodeProcessor<T>) this.nodeProcessor;
-			processor.setObstructionAwareEntity(entity);
+			AdvancedWalkNodeProcessor processor = (AdvancedWalkNodeProcessor) this.nodeProcessor;
 			processor.setCheckObstructions(checkObstructions);
 		}
 	}
@@ -55,7 +61,7 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFind
 	}
 
 	protected CustomPathFinder createPathFinder(int maxExpansions) {
-		AdvancedWalkNodeProcessor<T> nodeProcessor = new AdvancedWalkNodeProcessor<>();
+		AdvancedWalkNodeProcessor nodeProcessor = new AdvancedWalkNodeProcessor();
 		nodeProcessor.setCanEnterDoors(true);
 		return new CustomPathFinder(nodeProcessor, maxExpansions);
 	}
@@ -97,7 +103,7 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFind
 		super.checkForStuck(entityPos);
 
 		if(this.checkObstructions && this.currentPath != null && !this.currentPath.isFinished()) {
-			Vec3d target = this.currentPath.getVectorFromIndex(this.obstructionAwareEntity, Math.min(this.currentPath.getCurrentPathLength() - 1, this.currentPath.getCurrentPathIndex() + 0));
+			Vec3d target = this.currentPath.getVectorFromIndex(this.advancedPathFindingEntity, Math.min(this.currentPath.getCurrentPathLength() - 1, this.currentPath.getCurrentPathIndex() + 0));
 			Vec3d diff = target.subtract(entityPos);
 
 			int axis = 0;
@@ -124,9 +130,9 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFind
 				}
 			}
 
-			int height = MathHelper.floor(this.obstructionAwareEntity.getHeight() + 1.0F);
+			int height = MathHelper.floor(this.advancedPathFindingEntity.getHeight() + 1.0F);
 
-			int ceilHalfWidth = MathHelper.ceil(this.obstructionAwareEntity.getWidth() / 2.0f + 0.05F);
+			int ceilHalfWidth = MathHelper.ceil(this.advancedPathFindingEntity.getWidth() / 2.0f + 0.05F);
 
 			Vec3d checkPos;
 			switch(axis) {
@@ -147,18 +153,18 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFind
 
 			boolean blocked = false;
 
-			AxisAlignedBB checkBox = this.obstructionAwareEntity.getBoundingBox().expand(Math.signum(diff.x) * 0.2D, Math.signum(diff.y) * 0.2D, Math.signum(diff.z) * 0.2D);
+			AxisAlignedBB checkBox = this.advancedPathFindingEntity.getBoundingBox().expand(Math.signum(diff.x) * 0.2D, Math.signum(diff.y) * 0.2D, Math.signum(diff.z) * 0.2D);
 
 			loop: for(int yo = 0; yo < height; yo++) {
 				for(int xzo = -ceilHalfWidth; xzo <= ceilHalfWidth; xzo++) {
 					BlockPos pos = new BlockPos(checkPos.x + (axis != 0 ? xzo : 0), checkPos.y + (axis != 1 ? yo : 0), checkPos.z + (axis != 2 ? xzo : 0));
 
-					BlockState state = this.obstructionAwareEntity.world.getBlockState(pos);
+					BlockState state = this.advancedPathFindingEntity.world.getBlockState(pos);
 
-					PathNodeType nodeType = state.allowsMovement(this.obstructionAwareEntity.world, pos, PathType.LAND) ? PathNodeType.OPEN : PathNodeType.BLOCKED;
+					PathNodeType nodeType = state.allowsMovement(this.advancedPathFindingEntity.world, pos, PathType.LAND) ? PathNodeType.OPEN : PathNodeType.BLOCKED;
 
 					if(nodeType == PathNodeType.BLOCKED) {
-						VoxelShape collisionShape = state.getShape(this.obstructionAwareEntity.world, pos, ISelectionContext.forEntity(this.obstructionAwareEntity)).withOffset(pos.getX(), pos.getY(), pos.getZ());
+						VoxelShape collisionShape = state.getShape(this.advancedPathFindingEntity.world, pos, ISelectionContext.forEntity(this.advancedPathFindingEntity)).withOffset(pos.getX(), pos.getY(), pos.getZ());
 
 						//TODO Use ILineConsumer
 						if(collisionShape != null && collisionShape.toBoundingBoxList().stream().anyMatch(aabb -> aabb.intersects(checkBox))) {
@@ -172,8 +178,8 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFind
 			if(blocked) {
 				this.stuckCheckTicks++;
 
-				if(this.stuckCheckTicks > this.obstructionAwareEntity.getMaxStuckCheckTicks()) {
-					this.obstructionAwareEntity.onPathingObstructed(facing);
+				if(this.stuckCheckTicks > this.advancedPathFindingEntity.getMaxStuckCheckTicks()) {
+					this.advancedPathFindingEntity.onPathingObstructed(facing);
 					this.stuckCheckTicks = 0;
 				}
 			} else {
