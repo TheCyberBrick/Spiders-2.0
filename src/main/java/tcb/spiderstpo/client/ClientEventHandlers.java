@@ -80,16 +80,18 @@ public class ClientEventHandlers {
 
 					List<BlockPos> pathingTargets = climber.getTrackedPathingTargets();
 
-					int i = 0;
-					for(BlockPos pathingTarget : pathingTargets) {
-						double rx = entity.prevPosX + (entity.getPosX() - entity.prevPosX) * partialTicks;
-						double ry = entity.prevPosY + (entity.getPosY() - entity.prevPosY) * partialTicks;
-						double rz = entity.prevPosZ + (entity.getPosZ() - entity.prevPosZ) * partialTicks;
+					if(pathingTargets != null) {
+						int i = 0;
+						for(BlockPos pathingTarget : pathingTargets) {
+							double rx = entity.prevPosX + (entity.getPosX() - entity.prevPosX) * partialTicks;
+							double ry = entity.prevPosY + (entity.getPosY() - entity.prevPosY) * partialTicks;
+							double rz = entity.prevPosZ + (entity.getPosZ() - entity.prevPosZ) * partialTicks;
 
-						if(i == 0) {
-							WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pathingTarget).offset(-rx - x, -ry - y, -rz - z), 1.0f, 0.0f, 0.0f, 1.0f);
-						} else {
-							WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pathingTarget).offset(-rx - x, -ry - y, -rz - z), 1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f);
+							if(i == 0) {
+								WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pathingTarget).offset(-rx - x, -ry - y, -rz - z), 1.0f, 0.0f, 0.0f, 1.0f);
+							} else {
+								WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pathingTarget).offset(-rx - x, -ry - y, -rz - z), 1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f);
+							}
 						}
 					}
 

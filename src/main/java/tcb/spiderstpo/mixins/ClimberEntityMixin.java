@@ -4,6 +4,7 @@ import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -14,7 +15,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -25,9 +25,9 @@ import net.minecraft.command.arguments.EntityAnchorArgument.Type;
 import net.minecraft.entity.CreatureEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.MoverType;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 import net.minecraft.entity.monster.SpiderEntity;
@@ -38,6 +38,7 @@ import net.minecraft.network.datasync.EntityDataManager;
 import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.pathfinding.PathPoint;
+import net.minecraft.potion.Effects;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -55,9 +56,15 @@ import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.server.ChunkManager.EntityTracker;
 import net.minecraft.world.server.ServerWorld;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
-import tcb.spiderstpo.common.Config;
 import tcb.spiderstpo.common.Matrix4f;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
+import tcb.spiderstpo.common.entity.mob.IEntityMovementHook;
+import tcb.spiderstpo.common.entity.mob.ILivingEntityDataManagerHook;
+import tcb.spiderstpo.common.entity.mob.ILivingEntityLookAtHook;
+import tcb.spiderstpo.common.entity.mob.ILivingEntityRotationHook;
+import tcb.spiderstpo.common.entity.mob.ILivingEntityTravelHook;
+import tcb.spiderstpo.common.entity.mob.IMobEntityLivingTickHook;
+import tcb.spiderstpo.common.entity.mob.IMobEntityTickHook;
 import tcb.spiderstpo.common.entity.mob.Orientation;
 import tcb.spiderstpo.common.entity.movement.AdvancedClimberPathNavigator;
 import tcb.spiderstpo.common.entity.movement.AdvancedGroundPathNavigator;
@@ -65,7 +72,11 @@ import tcb.spiderstpo.common.entity.movement.ClimberLookController;
 import tcb.spiderstpo.common.entity.movement.ClimberMoveController;
 
 @Mixin(value = { SpiderEntity.class })
-public abstract class ClimberEntityMixin extends CreatureEntity implements IClimberEntity {
+public abstract class ClimberEntityMixin extends CreatureEntity implements IClimberEntity, IMobEntityLivingTickHook, ILivingEntityLookAtHook, IMobEntityTickHook, ILivingEntityRotationHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook, IEntityMovementHook {
+
+	//Copy from LivingEntity
+	private static final UUID SLOW_FALLING_ID = UUID.fromString("A5B6CF2A-2F7C-31EF-9022-7C3E7D5E6ABA");
+	private static final AttributeModifier SLOW_FALLING = new AttributeModifier(SLOW_FALLING_ID, "Slow falling acceleration reduction", -0.07, AttributeModifier.Operation.ADDITION);
 
 	private static final ImmutableList<DataParameter<Optional<BlockPos>>> PATHING_TARGETS;
 
@@ -119,6 +130,8 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 	private float nextStepDistance, nextFlap;
 	private Vector3d preWalkingPosition;
 
+	private double preMoveY;
+
 	private ClimberEntityMixin(EntityType<? extends CreatureEntity> type, World worldIn) {
 		super(type, worldIn);
 	}
@@ -156,12 +169,12 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 	public boolean canClimbInWater() {
 		return this.canClimbInWater;
 	}
-	
+
 	@Override
 	public void setCanClimbInWater(boolean value) {
 		this.canClimbInWater = value;
 	}
-	
+
 	@Override
 	public boolean canClimbInLava() {
 		return this.canClimbInLava;
@@ -171,27 +184,27 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 	public void setCanClimbInLava(boolean value) {
 		this.canClimbInLava = value;
 	}
-	
+
 	@Override
 	public float getCollisionsInclusionRange() {
 		return this.collisionsInclusionRange;
 	}
-	
+
 	@Override
 	public void setCollisionsInclusionRange(float range) {
 		this.collisionsInclusionRange = range;
 	}
-	
+
 	@Override
 	public float getCollisionsSmoothingRange() {
 		return this.collisionsSmoothingRange;
 	}
-	
+
 	@Override
 	public void setCollisionsSmoothingRange(float range) {
 		this.collisionsSmoothingRange = range;
 	}
-	
+
 	@Override
 	public float getBridgePathingMalus(MobEntity entity, BlockPos pos, PathPoint fallPathPoint) {
 		return -1.0f;
@@ -372,17 +385,15 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		}
 	}
 
-	@Override //TODO Use callbacks or redirects
-	public void lookAt(Type anchor, Vector3d pos) {
-		Vector3d dir = pos.subtract(this.getPositionVec());
+	@Override
+	public Vector3d onLookAt(Type anchor, Vector3d vec) {
+		Vector3d dir = vec.subtract(this.getPositionVec());
 		dir = this.getOrientation().getLocal(dir);
-		super.lookAt(anchor, this.getPositionVec().add(dir));
+		return dir;
 	}
 
-	@Override //TODO Use callbacks or redirects
-	public void tick() {
-		super.tick();
-
+	@Override
+	public void onTick() {
 		if(!this.world.isRemote && this.world instanceof ServerWorld) {
 			EntityTracker entityTracker = ((ServerWorld) this.world).getChunkProvider().chunkManager.entities.get(this.getEntityId());
 
@@ -419,11 +430,9 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		}
 	}
 
-	@Override //TODO Use callbacks or redirects
-	public void livingTick() {
+	@Override
+	public void onLivingTick() {
 		this.updateWalkingSide();
-
-		super.livingTick();
 	}
 
 	@Override
@@ -447,6 +456,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 			return pathingTargets;
 		}
+
 		return null;
 	}
 
@@ -659,20 +669,23 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		return new Orientation(attachmentNormal, localZ, localY, localX, componentZ, componentY, componentX, yaw, pitch);
 	}
 
-	@Override //TODO Use callbacks or redirects
-	public void setPositionAndRotationDirect(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
-		super.setPositionAndRotationDirect(x, y, z, (float) this.interpTargetYaw, (float) this.interpTargetPitch, posRotationIncrements, teleport);
+	@Override
+	public float getTargetYaw(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
+		return (float) this.interpTargetYaw;
 	}
 
-	@Override //TODO Use callbacks or redirects
-	public void setHeadRotation(float yaw, int rotationIncrements) {
-		super.setHeadRotation((float) this.interpTargetHeadYaw, rotationIncrements);
+	@Override
+	public float getTargetPitch(double x, double y, double z, float yaw, float pitch, int posRotationIncrements, boolean teleport) {
+		return (float) this.interpTargetPitch;
 	}
 
-	@Override //TODO Use callbacks or redirects
-	public void notifyDataManagerChange(DataParameter<?> key) {
-		super.notifyDataManagerChange(key);
+	@Override
+	public float getTargetHeadYaw(float yaw, int rotationIncrements) {
+		return (float) this.interpTargetHeadYaw;
+	}
 
+	@Override
+	public void onNotifyDataManagerChange(DataParameter<?> key) {
 		if(ROTATION_BODY.equals(key)) {
 			Rotations rotation = this.dataManager.get(ROTATION_BODY);
 			Vector3d look = new Vector3d(rotation.getX(), rotation.getY(), rotation.getZ());
@@ -692,46 +705,68 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		}
 	}
 
-	private Vector3d getStickingForce(Pair<Direction, Vector3d> walkingSide) {
-		if(!this.hasNoGravity()) { //TODO Forge gravity attribute
-			return walkingSide.getRight().scale(0.08f);
+	private double getGravity() {
+		if(this.hasNoGravity()) {
+			return 0;
 		}
 
-		return new Vector3d(0, 0, 0);
+		ModifiableAttributeInstance gravity = this.getAttribute(net.minecraftforge.common.ForgeMod.ENTITY_GRAVITY.get());
+
+		boolean isFalling = this.getMotion().y <= 0.0D;
+
+		if(isFalling && this.isPotionActive(Effects.SLOW_FALLING)) {
+			if(!gravity.hasModifier(SLOW_FALLING)) {
+				gravity.func_233767_b_(SLOW_FALLING);
+			}
+		} else if(gravity.hasModifier(SLOW_FALLING)) {
+			gravity.removeModifier(SLOW_FALLING);
+		}
+
+		return gravity.getValue();
 	}
 
-	//@Inject(method = "travel(Lnet/minecraft/util/math/vector/Vector3d;)V", at = @At("RETURN"), cancellable = true)
-	//private void onTravel(Vector3d relative, CallbackInfo ci) {
-	//	ci.cancel();
-	@Override //TODO Use callbacks or redirects
-	public void travel(Vector3d relative) {
-		boolean canTravel = this.isServerWorld() || this.canPassengerSteer();
+	private Vector3d getStickingForce(Pair<Direction, Vector3d> walkingSide) {
+		double uprightness = Math.max(this.attachmentNormal.y, 0);
+		double gravity = this.getGravity();
+		double stickingForce = gravity * uprightness + 0.08D * (1 - uprightness);
+		return walkingSide.getRight().scale(stickingForce);
+	}
 
-		this.isTravelingInFluid = false;
+	@Override
+	public boolean onTravel(Vector3d relative, boolean pre) {
+		if(pre) {
+			boolean canTravel = this.isServerWorld() || this.canPassengerSteer();
 
-		FluidState fluidState = this.world.getFluidState(this.func_233580_cy_());
+			this.isTravelingInFluid = false;
 
-		if(!this.canClimbInWater && this.isInWater() && this.func_241208_cS_() && !this.func_230285_a_(fluidState.getFluid())) {
-			this.isTravelingInFluid = true;
+			FluidState fluidState = this.world.getFluidState(this.func_233580_cy_());
 
-			if(canTravel) {
-				super.travel(relative);
+			if(!this.canClimbInWater && this.isInWater() && this.func_241208_cS_() && !this.func_230285_a_(fluidState.getFluid())) {
+				this.isTravelingInFluid = true;
+
+				if(canTravel) {
+					return false;
+				}
+			} else if(!this.canClimbInLava && this.isInLava() && this.func_241208_cS_() && !this.func_230285_a_(fluidState.getFluid())) {
+				this.isTravelingInFluid = true;
+
+				if(canTravel) {
+					return false;
+				}
+			} else if(canTravel) {
+				this.travelOnGround(relative);
 			}
-		} else if(!this.canClimbInLava && this.isInLava() && this.func_241208_cS_() && !this.func_230285_a_(fluidState.getFluid())) {
-			this.isTravelingInFluid = true;
 
-			if(canTravel) {
-				super.travel(relative);
+			if(!canTravel) {
+				this.func_233629_a_(this, true);
 			}
-		} else if(canTravel) {
-			this.travelOnGround(relative);
-		}
 
-		if(!canTravel) {
-			this.func_233629_a_(this, true);
+			this.updateOffsetsAndOrientation();
+			return true;
+		} else {
+			this.updateOffsetsAndOrientation();
+			return false;
 		}
-
-		this.updateOffsetsAndOrientation();
 	}
 
 	private void travelOnGround(Vector3d relative) {
@@ -743,6 +778,12 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		Pair<Direction, Vector3d> groundDirection = this.getGroundDirection();
 
 		Vector3d stickingForce = this.getStickingForce(groundDirection);
+
+		boolean isFalling = this.getMotion().y <= 0.0D;
+
+		if(isFalling && this.isPotionActive(Effects.SLOW_FALLING)) {
+			this.fallDistance = 0;
+		}
 
 		float forward = (float) relative.z;
 
@@ -888,38 +929,24 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		this.func_233629_a_(this, true);
 	}
 
-	@Override //TODO Use callbacks or redirects
-	public void func_233629_a_(LivingEntity entity, boolean includeY) {
-		entity.prevLimbSwingAmount = entity.limbSwingAmount;
-		double dx = entity.getPosX() - entity.prevPosX;
-		double dy = includeY ? entity.getPosY() - entity.prevPosY : 0.0D;
-		double dz = entity.getPosZ() - entity.prevPosZ;
-		float f = MathHelper.sqrt(dx * dx + dy * dy + dz * dz) * 4.0F;
-		if(f > 1.0F) {
-			f = 1.0F;
+	@Override
+	public boolean onMove(MoverType type, Vector3d pos, boolean pre) {
+		if(pre) {
+			this.preWalkingPosition = this.getPositionVec();
+			this.preMoveY = this.getPosY();
+		} else {
+			if(Math.abs(this.getPosY() - this.preMoveY - pos.y) > 0.000001D) {
+				this.setMotion(this.getMotion().mul(1, 0, 1));
+			}
+
+			this.onGround |= this.collidedHorizontally || this.collidedVertically;
 		}
 
-		entity.limbSwingAmount += (f - entity.limbSwingAmount) * 0.4F;
-		entity.limbSwing += entity.limbSwingAmount;
+		return false;
 	}
 
-	@Override //TODO Use callbacks or redirects
-	public void move(MoverType type, Vector3d pos) {
-		this.preWalkingPosition = this.getPositionVec();
-
-		double py = this.getPosY();
-
-		super.move(type, pos);
-
-		if(Math.abs(this.getPosY() - py - pos.y) > 0.000001D) {
-			this.setMotion(this.getMotion().mul(1, 0, 1));
-		}
-
-		this.onGround |= this.collidedHorizontally || this.collidedVertically;
-	}
-
-	@Override //TODO Use callbacks or redirects
-	protected BlockPos getOnPosition() {
+	@Override
+	public BlockPos getAdjustedOnPosition(BlockPos onPosition) {
 		float verticalOffset = this.getVerticalOffset(1);
 
 		int x = MathHelper.floor(this.getPosX() + this.attachmentOffsetX - (float) this.attachmentNormal.x * (verticalOffset + 0.2f));
@@ -939,8 +966,8 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		return pos;
 	}
 
-	@Override //TODO Use callbacks or redirects
-	protected final boolean canTriggerWalking() {
+	@Override
+	public boolean getAdjustedCanTriggerWalking(boolean canTriggerWalking) {
 		if(this.preWalkingPosition != null && this.canClimberTriggerWalking() && !this.isPassenger()) {
 			Vector3d moved = this.getPositionVec().subtract(this.preWalkingPosition);
 			this.preWalkingPosition = null;

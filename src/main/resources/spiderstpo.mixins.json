@@ -5,10 +5,14 @@
   "refmap": "spiderstpo.refmap.json",
   "package": "tcb.spiderstpo.mixins",
   "mixins": [
+    "EntityMixin",
+    "LivingEntityMixin",
+    "MobEntityMixin",
     "ClimberEntityMixin",
     "BetterSpiderEntityMixin"
   ],
   "client": [
+    "LivingEntityClientMixin"
   ],
   "injectors": {
     "defaultRequire": 1
