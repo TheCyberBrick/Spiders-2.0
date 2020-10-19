@@ -1,22 +1,24 @@
 package tcb.spiderstpo.common;
 
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.monster.EntityCaveSpider;
 import net.minecraft.entity.monster.EntitySpider;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.MobSpawnerBaseLogic;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.common.config.ConfigManager;
 import net.minecraftforge.event.entity.EntityJoinWorldEvent;
 import net.minecraftforge.event.entity.living.LivingSpawnEvent;
-import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
 import net.minecraftforge.fml.common.Mod.Instance;
 import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.eventhandler.Event.Result;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import tcb.spiderstpo.common.entity.mob.BetterCaveSpiderEntity;
@@ -49,12 +51,39 @@ public class SpiderMod {
 	}
 
 	@SubscribeEvent(priority = EventPriority.HIGHEST)
+	public static void onSpawnEntity(final LivingSpawnEvent.CheckSpawn event) {
+		if(Config.replaceAnySpawns || Config.replaceNaturalSpawns) {
+			Entity entity = event.getEntity();
+
+			if(!entity.getEntityWorld().isRemote) {
+				Entity replacement = replaceSpawn(entity, true);
+				if(replacement != null) {
+					event.setResult(Result.DENY);
+
+					MobSpawnerBaseLogic spawner = event.getSpawner();
+					if(spawner != null) {
+						spawner.setEntityId(EntityList.getKey(replacement.getClass()));
+					}
+				}
+			}
+		}
+	}
+
+	@SubscribeEvent(priority = EventPriority.HIGHEST)
 	public static void onSpawnEntity(final LivingSpawnEvent.SpecialSpawn event) {
 		if(Config.replaceAnySpawns || Config.replaceNaturalSpawns) {
 			Entity entity = event.getEntity();
 
-			if(!entity.getEntityWorld().isRemote && replaceSpawn(entity, true)) {
-				event.setCanceled(true);
+			if(!entity.getEntityWorld().isRemote) {
+				Entity replacement = replaceSpawn(entity, true);
+				if(replacement != null) {
+					event.setCanceled(true);
+
+					MobSpawnerBaseLogic spawner = event.getSpawner();
+					if(spawner != null) {
+						spawner.setEntityId(EntityList.getKey(replacement.getClass()));
+					}
+				}
 			}
 		}
 	}
@@ -64,13 +93,13 @@ public class SpiderMod {
 		if(Config.replaceAnySpawns) {
 			Entity entity = event.getEntity();
 
-			if(!entity.getEntityWorld().isRemote && replaceSpawn(entity, false)) {
+			if(!entity.getEntityWorld().isRemote && replaceSpawn(entity, false) != null) {
 				event.setCanceled(true);
 			}
 		}
 	}
 
-	private static boolean replaceSpawn(Entity entity, boolean newSpawn) {
+	private static Entity replaceSpawn(Entity entity, boolean newSpawn) {
 		World world = entity.getEntityWorld();
 
 		Entity replacement = null;
@@ -92,9 +121,9 @@ public class SpiderMod {
 			replacement.forceSpawn = entity.forceSpawn;
 
 			world.spawnEntity(replacement);
-			return true;
+			return replacement;
 		}
 
-		return false;
+		return null;
 	}
 }
