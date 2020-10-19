@@ -20,8 +20,9 @@ import net.minecraft.util.math.shapes.ISelectionContext;
 import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.world.World;
+import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 
-public class AdvancedGroundPathNavigator<T extends MobEntity & IAdvancedPathFindingEntity> extends GroundPathNavigator {
+public class AdvancedGroundPathNavigator<T extends MobEntity & IClimberEntity> extends GroundPathNavigator {
 	protected CustomPathFinder pathFinder;
 	protected long lastTimeUpdated;
 	protected BlockPos targetPos;

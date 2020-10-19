@@ -1,18 +1,20 @@
 package tcb.spiderstpo.common.entity.movement;
 
+import net.minecraft.entity.MobEntity;
 import net.minecraft.entity.ai.controller.MovementController;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.vector.Vector3d;
-import tcb.spiderstpo.common.entity.mob.AbstractClimberEntity;
+import tcb.spiderstpo.common.entity.mob.IClimberEntity;
+import tcb.spiderstpo.common.entity.mob.Orientation;
 
-public class ClimberMoveController extends MovementController {
+public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends MovementController {
 	protected int courseChangeCooldown;
 	protected boolean blocked = false;
 
-	protected final AbstractClimberEntity climber;
+	protected final IClimberEntity climber;
 
-	public ClimberMoveController(AbstractClimberEntity entity) {
+	public ClimberMoveController(T entity) {
 		super(entity);
 		this.climber = entity;
 	}
@@ -24,9 +26,9 @@ public class ClimberMoveController extends MovementController {
 		if(this.action == MovementController.Action.MOVE_TO) {
 			this.action = MovementController.Action.WAIT;
 
-			AbstractClimberEntity.Orientation orientation = this.climber.getOrientation();
+			Orientation orientation = this.climber.getOrientation();
 
-			Vector3d up = orientation.getDirection(this.climber.rotationYaw, -90);
+			Vector3d up = orientation.getGlobal(this.mob.rotationYaw, -90);
 
 			int entitySizeX = MathHelper.floor(this.mob.getWidth() + 1.0F);
 			int entitySizeY = MathHelper.floor(this.mob.getHeight() + 1.0F);
