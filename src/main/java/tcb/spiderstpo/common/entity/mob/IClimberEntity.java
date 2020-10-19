@@ -21,14 +21,39 @@ public interface IClimberEntity extends IAdvancedPathFindingEntity {
 
 	public Orientation calculateOrientation(float partialTicks);
 
+	public void setRenderOrientation(Orientation orientation);
+
+	@Nullable
+	public Orientation getRenderOrientation();
+
 	public float getMovementSpeed();
 
 	public Pair<Direction, Vector3d> getGroundDirection();
 
+	public boolean shouldTrackPathingTargets();
+	
 	@Nullable
-	public List<BlockPos> getPathingTargets();
+	public List<BlockPos> getTrackedPathingTargets();
 
 	public boolean canClimbOnBlock(BlockState state, BlockPos pos);
 
 	public float getBlockSlipperiness(BlockPos pos);
+
+	public boolean canClimberTriggerWalking();
+
+	public boolean canClimbInWater();
+
+	public void setCanClimbInWater(boolean value);
+
+	public boolean canClimbInLava();
+
+	public void setCanClimbInLava(boolean value);
+
+	public float getCollisionsInclusionRange();
+
+	public void setCollisionsInclusionRange(float range);
+
+	public float getCollisionsSmoothingRange();
+
+	public void setCollisionsSmoothingRange(float range);
 }

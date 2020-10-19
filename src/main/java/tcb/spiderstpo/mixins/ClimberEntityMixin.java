@@ -14,6 +14,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -85,8 +86,6 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		ROTATION_HEAD = EntityDataManager.createKey(cls, DataSerializers.ROTATIONS);
 	}
 
-	private boolean pathFinderDebugPreview;
-
 	private double prevAttachmentOffsetX, prevAttachmentOffsetY, prevAttachmentOffsetZ;
 	private double attachmentOffsetX, attachmentOffsetY, attachmentOffsetZ;
 
@@ -115,6 +114,8 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 	private Orientation orientation;
 	private Pair<Direction, Vector3d> groundDirecton;
 
+	private Orientation renderOrientation;
+
 	private float nextStepDistance, nextFlap;
 	private Vector3d preWalkingPosition;
 
@@ -133,9 +134,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 	@Inject(method = "registerData()V", at = @At("RETURN"))
 	private void onRegisterData(CallbackInfo ci) {
-		this.pathFinderDebugPreview = Config.PATH_FINDER_DEBUG_PREVIEW.get();
-
-		if(this.pathFinderDebugPreview) {
+		if(this.shouldTrackPathingTargets()) {
 			for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 				this.dataManager.register(pathingTarget, Optional.empty());
 			}
@@ -153,6 +152,46 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		ci.setReturnValue(navigate);
 	}
 
+	@Override
+	public boolean canClimbInWater() {
+		return this.canClimbInWater;
+	}
+	
+	@Override
+	public void setCanClimbInWater(boolean value) {
+		this.canClimbInWater = value;
+	}
+	
+	@Override
+	public boolean canClimbInLava() {
+		return this.canClimbInLava;
+	}
+
+	@Override
+	public void setCanClimbInLava(boolean value) {
+		this.canClimbInLava = value;
+	}
+	
+	@Override
+	public float getCollisionsInclusionRange() {
+		return this.collisionsInclusionRange;
+	}
+	
+	@Override
+	public void setCollisionsInclusionRange(float range) {
+		this.collisionsInclusionRange = range;
+	}
+	
+	@Override
+	public float getCollisionsSmoothingRange() {
+		return this.collisionsSmoothingRange;
+	}
+	
+	@Override
+	public void setCollisionsSmoothingRange(float range) {
+		this.collisionsSmoothingRange = range;
+	}
+	
 	@Override
 	public float getBridgePathingMalus(MobEntity entity, BlockPos pos, PathPoint fallPathPoint) {
 		return -1.0f;
@@ -240,7 +279,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		}
 	}
 
-	protected void updateWalkingSide() {
+	private void updateWalkingSide() {
 		Direction avoidPathingFacing = null;
 
 		AxisAlignedBB entityBox = this.getBoundingBox();
@@ -311,6 +350,16 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 	}
 
 	@Override
+	public void setRenderOrientation(Orientation orientation) {
+		this.renderOrientation = orientation;
+	}
+
+	@Override
+	public Orientation getRenderOrientation() {
+		return this.renderOrientation;
+	}
+
+	@Override
 	public float getAttachmentOffset(Direction.Axis axis, float partialTicks) {
 		switch(axis) {
 		default:
@@ -347,7 +396,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 				look = orientation.getGlobal(this.rotationYawHead, 0.0f);
 				this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
 
-				if(this.pathFinderDebugPreview) {
+				if(this.shouldTrackPathingTargets()) {
 					Path path = this.getNavigator().getPath();
 					if(path != null) {
 						int i = 0;
@@ -384,8 +433,8 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 	@Override
 	@Nullable
-	public List<BlockPos> getPathingTargets() {
-		if(this.pathFinderDebugPreview) {
+	public List<BlockPos> getTrackedPathingTargets() {
+		if(this.shouldTrackPathingTargets()) {
 			List<BlockPos> pathingTargets = new ArrayList<>(PATHING_TARGETS.size());
 
 			for(DataParameter<Optional<BlockPos>> key : PATHING_TARGETS) {
@@ -406,7 +455,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		return 0.075f;
 	}
 
-	protected void forEachCollisonBox(AxisAlignedBB aabb, VoxelShapes.ILineConsumer action) {
+	private void forEachCollisonBox(AxisAlignedBB aabb, VoxelShapes.ILineConsumer action) {
 		int minChunkX = ((MathHelper.floor(aabb.minX - 1.0E-7D) - 1) >> 4);
 		int maxChunkX = ((MathHelper.floor(aabb.maxX + 1.0E-7D) + 1) >> 4);
 		int minChunkZ = ((MathHelper.floor(aabb.minZ - 1.0E-7D) - 1) >> 4);
@@ -462,7 +511,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		shapes.forEach(shape -> shape.forEachBox(action));
 	}
 
-	protected List<AxisAlignedBB> getCollisionBoxes(AxisAlignedBB aabb) {
+	private List<AxisAlignedBB> getCollisionBoxes(AxisAlignedBB aabb) {
 		List<AxisAlignedBB> boxes = new ArrayList<>();
 		this.forEachCollisonBox(aabb, (minX, minY, minZ, maxX, maxY, maxZ) -> boxes.add(new AxisAlignedBB(minX, minY, minZ, maxX, maxY, maxZ)));
 		return boxes;
@@ -479,7 +528,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		return offsetState.getBlock().getSlipperiness(offsetState, this.world, pos, this) * 0.91f;
 	}
 
-	protected void updateOffsetsAndOrientation() {
+	private void updateOffsetsAndOrientation() {
 		Vector3d direction = this.getOrientation().getGlobal(this.rotationYaw, this.rotationPitch);
 
 		boolean isAttached = false;
@@ -643,7 +692,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		}
 	}
 
-	public Vector3d getStickingForce(Pair<Direction, Vector3d> walkingSide) {
+	private Vector3d getStickingForce(Pair<Direction, Vector3d> walkingSide) {
 		if(!this.hasNoGravity()) { //TODO Forge gravity attribute
 			return walkingSide.getRight().scale(0.08f);
 		}
@@ -685,7 +734,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		this.updateOffsetsAndOrientation();
 	}
 
-	protected void travelOnGround(Vector3d relative) {
+	private void travelOnGround(Vector3d relative) {
 		Orientation orientation = this.getOrientation();
 
 		Vector3d forwardVector = orientation.getGlobal(this.rotationYaw, 0);
@@ -892,7 +941,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 	@Override //TODO Use callbacks or redirects
 	protected final boolean canTriggerWalking() {
-		if(this.preWalkingPosition != null && this.canActuallyTriggerWalking() && !this.isPassenger()) {
+		if(this.preWalkingPosition != null && this.canClimberTriggerWalking() && !this.isPassenger()) {
 			Vector3d moved = this.getPositionVec().subtract(this.preWalkingPosition);
 			this.preWalkingPosition = null;
 
@@ -936,7 +985,8 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		return false;
 	}
 
-	protected boolean canActuallyTriggerWalking() {
+	@Override
+	public boolean canClimberTriggerWalking() {
 		return true;
 	}
 }

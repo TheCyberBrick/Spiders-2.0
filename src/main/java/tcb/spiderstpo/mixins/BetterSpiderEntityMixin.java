@@ -3,6 +3,9 @@ package tcb.spiderstpo.mixins;
 import java.util.function.Predicate;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.CreatureEntity;
@@ -15,15 +18,27 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3i;
 import net.minecraft.world.IBlockReader;
 import net.minecraft.world.World;
+import tcb.spiderstpo.common.Config;
 import tcb.spiderstpo.common.ModTags;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 
 @Mixin(value = SpiderEntity.class, priority = 1001)
 public abstract class BetterSpiderEntityMixin extends CreatureEntity implements IClimberEntity {
+	private boolean pathFinderDebugPreview;
 
 	private BetterSpiderEntityMixin(EntityType<? extends CreatureEntity> type, World worldIn) {
 		super(type, worldIn);
 	}
+
+	@Inject(method = "registerData()V", at = @At("HEAD"))
+	private void onRegisterData(CallbackInfo ci) {
+		this.pathFinderDebugPreview = Config.PATH_FINDER_DEBUG_PREVIEW.get();
+	}
+
+	@Override
+	public boolean shouldTrackPathingTargets() {
+		return this.pathFinderDebugPreview;
+	}	
 
 	@Override	
 	public boolean canClimbOnBlock(BlockState state, BlockPos pos) {
