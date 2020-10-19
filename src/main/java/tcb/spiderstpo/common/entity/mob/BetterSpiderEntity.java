@@ -44,6 +44,7 @@ import net.minecraft.world.storage.loot.LootTableList;
 public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	public BetterSpiderEntity(World world) {
 		super(world);
+		this.experienceValue = 5;
 		this.setSize(0.95f, 0.85f);
 	}
 
