@@ -23,22 +23,18 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 	public void tick() {
 		double speed = this.climber.getMovementSpeed() * this.speed;
 
+		//TODO Implement strafing
+		
 		if(this.action == MovementController.Action.MOVE_TO) {
 			this.action = MovementController.Action.WAIT;
+
+			double dx = this.posX - this.mob.getPosX();
+			double dy = this.posY - this.mob.getPosY();
+			double dz = this.posZ - this.mob.getPosZ();
 
 			Orientation orientation = this.climber.getOrientation();
 
 			Vector3d up = orientation.getGlobal(this.mob.rotationYaw, -90);
-
-			int entitySizeX = MathHelper.floor(this.mob.getWidth() + 1.0F);
-			int entitySizeY = MathHelper.floor(this.mob.getHeight() + 1.0F);
-			int entitySizeZ = MathHelper.floor(this.mob.getWidth() + 1.0F);
-
-			Direction groundSide = this.climber.getGroundDirection().getLeft();
-
-			double dx = (this.posX + Math.max(0, groundSide.getXOffset()) * (entitySizeX - 1) + groundSide.getXOffset() * 0.5f) - this.mob.getPosX();
-			double dy = (this.posY + Math.max(0, groundSide.getYOffset()) * (entitySizeY - 1) + groundSide.getYOffset() * 0.5f) - this.mob.getPosY();
-			double dz = (this.posZ + Math.max(0, groundSide.getZOffset()) * (entitySizeZ - 1) + groundSide.getZOffset() * 0.5f) - this.mob.getPosZ();
 
 			Vector3d offset = new Vector3d(dx, dy, dz);
 
@@ -56,7 +52,7 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 
 				this.mob.setAIMoveSpeed((float) speed);
 
-				if(this.posY >= this.mob.getPosY() + this.mob.getHeight() && groundSide == Direction.DOWN) {
+				if(this.posY >= this.mob.getPosY() + this.mob.getHeight() && this.climber.getGroundDirection().getLeft() == Direction.DOWN) {
 					this.mob.getJumpController().setJumping();
 					this.action = MovementController.Action.JUMPING;
 				}

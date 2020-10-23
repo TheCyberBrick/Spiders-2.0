@@ -32,6 +32,7 @@ import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.attributes.ModifiableAttributeInstance;
 import net.minecraft.entity.monster.SpiderEntity;
 import net.minecraft.fluid.FluidState;
+import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
@@ -59,6 +60,8 @@ import tcb.spiderstpo.common.CollisionSmoothingUtil;
 import tcb.spiderstpo.common.Matrix4f;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.IEntityMovementHook;
+import tcb.spiderstpo.common.entity.mob.IEntityReadWriteHook;
+import tcb.spiderstpo.common.entity.mob.IEntityRegisterDataHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityDataManagerHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityLookAtHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityRotationHook;
@@ -66,19 +69,25 @@ import tcb.spiderstpo.common.entity.mob.ILivingEntityTravelHook;
 import tcb.spiderstpo.common.entity.mob.IMobEntityLivingTickHook;
 import tcb.spiderstpo.common.entity.mob.IMobEntityTickHook;
 import tcb.spiderstpo.common.entity.mob.Orientation;
+import tcb.spiderstpo.common.entity.mob.PathingTarget;
 import tcb.spiderstpo.common.entity.movement.AdvancedClimberPathNavigator;
 import tcb.spiderstpo.common.entity.movement.AdvancedGroundPathNavigator;
 import tcb.spiderstpo.common.entity.movement.ClimberLookController;
 import tcb.spiderstpo.common.entity.movement.ClimberMoveController;
+import tcb.spiderstpo.common.entity.movement.DirectionalPathPoint;
 
 @Mixin(value = { SpiderEntity.class })
-public abstract class ClimberEntityMixin extends CreatureEntity implements IClimberEntity, IMobEntityLivingTickHook, ILivingEntityLookAtHook, IMobEntityTickHook, ILivingEntityRotationHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook, IEntityMovementHook {
+public abstract class ClimberEntityMixin extends CreatureEntity implements IClimberEntity, IMobEntityLivingTickHook, ILivingEntityLookAtHook, IMobEntityTickHook, ILivingEntityRotationHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook, IEntityMovementHook, IEntityReadWriteHook, IEntityRegisterDataHook {
 
 	//Copy from LivingEntity
 	private static final UUID SLOW_FALLING_ID = UUID.fromString("A5B6CF2A-2F7C-31EF-9022-7C3E7D5E6ABA");
 	private static final AttributeModifier SLOW_FALLING = new AttributeModifier(SLOW_FALLING_ID, "Slow falling acceleration reduction", -0.07, AttributeModifier.Operation.ADDITION);
 
+	private static final DataParameter<Float> MOVEMENT_TARGET_X;
+	private static final DataParameter<Float> MOVEMENT_TARGET_Y;
+	private static final DataParameter<Float> MOVEMENT_TARGET_Z;
 	private static final ImmutableList<DataParameter<Optional<BlockPos>>> PATHING_TARGETS;
+	private static final ImmutableList<DataParameter<Direction>> PATHING_SIDES;
 
 	private static final DataParameter<Rotations> ROTATION_BODY;
 	private static final DataParameter<Rotations> ROTATION_HEAD;
@@ -87,11 +96,18 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		@SuppressWarnings("unchecked")
 		Class<Entity> cls = (Class<Entity>) MethodHandles.lookup().lookupClass();
 
+		MOVEMENT_TARGET_X = EntityDataManager.createKey(cls, DataSerializers.FLOAT);
+		MOVEMENT_TARGET_Y = EntityDataManager.createKey(cls, DataSerializers.FLOAT);
+		MOVEMENT_TARGET_Z = EntityDataManager.createKey(cls, DataSerializers.FLOAT);
+
 		ImmutableList.Builder<DataParameter<Optional<BlockPos>>> pathingTargets = ImmutableList.builder();
+		ImmutableList.Builder<DataParameter<Direction>> pathingSides = ImmutableList.builder();
 		for(int i = 0; i < 8; i++) {
 			pathingTargets.add(EntityDataManager.createKey(cls, DataSerializers.OPTIONAL_BLOCK_POS));
+			pathingSides.add(EntityDataManager.createKey(cls, DataSerializers.DIRECTION));
 		}
 		PATHING_TARGETS = pathingTargets.build();
+		PATHING_SIDES = pathingSides.build();
 
 		ROTATION_BODY = EntityDataManager.createKey(cls, DataSerializers.ROTATIONS);
 		ROTATION_HEAD = EntityDataManager.createKey(cls, DataSerializers.ROTATIONS);
@@ -145,11 +161,26 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		this.lookController = new ClimberLookController<>(this);
 	}
 
-	@Inject(method = "registerData()V", at = @At("RETURN"))
-	private void onRegisterData(CallbackInfo ci) {
+	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true)
+	private void onCreateNavigator(World world, CallbackInfoReturnable<PathNavigator> ci) {
+		AdvancedGroundPathNavigator<ClimberEntityMixin> navigate = new AdvancedClimberPathNavigator<ClimberEntityMixin>(this, world, false, true, true);
+		navigate.setCanSwim(true);
+		ci.setReturnValue(navigate);
+	}
+
+	@Override
+	public void onRegisterData() {
 		if(this.shouldTrackPathingTargets()) {
+			this.dataManager.register(MOVEMENT_TARGET_X, 0.0f);
+			this.dataManager.register(MOVEMENT_TARGET_Y, 0.0f);
+			this.dataManager.register(MOVEMENT_TARGET_Z, 0.0f);
+
 			for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 				this.dataManager.register(pathingTarget, Optional.empty());
+			}
+
+			for(DataParameter<Direction> pathingSide : PATHING_SIDES) {
+				this.dataManager.register(pathingSide, Direction.DOWN);
 			}
 		}
 
@@ -158,11 +189,26 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		this.dataManager.register(ROTATION_HEAD, new Rotations(0, 0, 0));
 	}
 
-	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true)
-	private void onCreateNavigator(World world, CallbackInfoReturnable<PathNavigator> ci) {
-		AdvancedGroundPathNavigator<ClimberEntityMixin> navigate = new AdvancedClimberPathNavigator<ClimberEntityMixin>(this, world, false, true, true);
-		navigate.setCanSwim(true);
-		ci.setReturnValue(navigate);
+	@Override
+	public void onWrite(CompoundNBT nbt) {
+		nbt.putDouble("SpidersTPO.AttachmentNormalX", this.attachmentNormal.x);
+		nbt.putDouble("SpidersTPO.AttachmentNormalY", this.attachmentNormal.y);
+		nbt.putDouble("SpidersTPO.AttachmentNormalZ", this.attachmentNormal.z);
+
+		nbt.putInt("SpidersTPO.AttachedTicks", this.attachedTicks);
+	}
+
+	@Override
+	public void onRead(CompoundNBT nbt) {
+		this.prevAttachmentNormal = this.attachmentNormal = new Vector3d(
+				nbt.getDouble("SpidersTPO.AttachmentNormalX"),
+				nbt.getDouble("SpidersTPO.AttachmentNormalY"),
+				nbt.getDouble("SpidersTPO.AttachmentNormalZ")
+				);
+
+		this.attachedTicks = nbt.getInt("SpidersTPO.AttachedTicks");
+
+		this.orientation = this.calculateOrientation(1);
 	}
 
 	@Override
@@ -408,21 +454,46 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 				this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
 
 				if(this.shouldTrackPathingTargets()) {
+					this.dataManager.set(MOVEMENT_TARGET_X, (float) this.getMoveHelper().getX());
+					this.dataManager.set(MOVEMENT_TARGET_Y, (float) this.getMoveHelper().getY());
+					this.dataManager.set(MOVEMENT_TARGET_Z, (float) this.getMoveHelper().getZ());
+
 					Path path = this.getNavigator().getPath();
 					if(path != null) {
 						int i = 0;
+
 						for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
+							DataParameter<Direction> pathingSide = PATHING_SIDES.get(i);
+
 							if(path.getCurrentPathIndex() + i < path.getCurrentPathLength()) {
 								PathPoint point = path.getPathPointFromIndex(path.getCurrentPathIndex() + i);
+
 								this.dataManager.set(pathingTarget, Optional.of(new BlockPos(point.x, point.y, point.z)));
+
+								if(point instanceof DirectionalPathPoint) {
+									Direction dir = ((DirectionalPathPoint) point).getPathSide();
+
+									if(dir != null) {
+										this.dataManager.set(pathingSide, dir);
+									} else {
+										this.dataManager.set(pathingSide, Direction.DOWN);
+									}
+								}
+
 							} else {
 								this.dataManager.set(pathingTarget, Optional.empty());
+								this.dataManager.set(pathingSide, Direction.DOWN);
 							}
+
 							i++;
 						}
 					} else {
 						for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 							this.dataManager.set(pathingTarget, Optional.empty());
+						}
+
+						for(DataParameter<Direction> pathingSide : PATHING_SIDES) {
+							this.dataManager.set(pathingSide, Direction.DOWN);
 						}
 					}
 				}
@@ -442,16 +513,29 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 	@Override
 	@Nullable
-	public List<BlockPos> getTrackedPathingTargets() {
+	public Vector3d getTrackedMovementTarget() {
 		if(this.shouldTrackPathingTargets()) {
-			List<BlockPos> pathingTargets = new ArrayList<>(PATHING_TARGETS.size());
+			return new Vector3d(this.dataManager.get(MOVEMENT_TARGET_X), this.dataManager.get(MOVEMENT_TARGET_Y), this.dataManager.get(MOVEMENT_TARGET_Z));
+		}
 
+		return null;
+	}
+
+	@Override
+	@Nullable
+	public List<PathingTarget> getTrackedPathingTargets() {
+		if(this.shouldTrackPathingTargets()) {
+			List<PathingTarget> pathingTargets = new ArrayList<>(PATHING_TARGETS.size());
+
+			int i = 0;
 			for(DataParameter<Optional<BlockPos>> key : PATHING_TARGETS) {
 				BlockPos pos = this.dataManager.get(key).orElse(null);
 
 				if(pos != null) {
-					pathingTargets.add(pos);
+					pathingTargets.add(new PathingTarget(pos, this.dataManager.get(PATHING_SIDES.get(i))));
 				}
+
+				i++;
 			}
 
 			return pathingTargets;

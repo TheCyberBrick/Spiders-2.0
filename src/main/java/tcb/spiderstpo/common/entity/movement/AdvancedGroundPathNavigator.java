@@ -23,7 +23,7 @@ import net.minecraft.world.World;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 
 public class AdvancedGroundPathNavigator<T extends MobEntity & IClimberEntity> extends GroundPathNavigator {
-	protected CustomPathFinder pathFinder;
+	protected AdvancedPathFinder pathFinder;
 	protected long lastTimeUpdated;
 	protected BlockPos targetPos;
 
@@ -49,7 +49,7 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IClimberEntity> e
 		}
 	}
 
-	public CustomPathFinder getAssignedPathFinder() {
+	public AdvancedPathFinder getAssignedPathFinder() {
 		return this.pathFinder;
 	}
 
@@ -60,10 +60,10 @@ public class AdvancedGroundPathNavigator<T extends MobEntity & IClimberEntity> e
 		return this.pathFinder;
 	}
 
-	protected CustomPathFinder createPathFinder(int maxExpansions) {
+	protected AdvancedPathFinder createPathFinder(int maxExpansions) {
 		AdvancedWalkNodeProcessor nodeProcessor = new AdvancedWalkNodeProcessor();
 		nodeProcessor.setCanEnterDoors(true);
-		return new CustomPathFinder(nodeProcessor, maxExpansions);
+		return new AdvancedPathFinder(nodeProcessor, maxExpansions);
 	}
 
 	@Nullable

@@ -152,7 +152,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 					state = this.blockaccess.getBlockState(checkPos.setPos(x, by, z));
 				}
 			} else if(this.entity.func_233570_aj_() || !this.startFromGround) {
-				by = MathHelper.floor(y + 0.5D);
+				by = MathHelper.floor(y + Math.min(0.5D, Math.max(this.entity.getHeight() - 0.1f, 0.0D)));
 			} else {
 				BlockPos blockpos;
 				for(blockpos = this.entity.func_233580_cy_(); (this.blockaccess.getBlockState(blockpos).isAir() || this.blockaccess.getBlockState(blockpos).allowsMovement(this.blockaccess, blockpos, PathType.LAND)) && blockpos.getY() > 0; blockpos = blockpos.down()) { }
@@ -171,7 +171,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		final BlockPos initialStartPos = new BlockPos(x, by, z);
 		BlockPos startPos = initialStartPos;
 
-		long packed = this.getDirectionalPathNodeTypeCached(this.entity, startPos.getX(), startPos.getY(), startPos.getZ());
+		long packed = this.removeNonStartingSides(this.getDirectionalPathNodeTypeCached(this.entity, startPos.getX(), startPos.getY(), startPos.getZ()));
 		DirectionalPathPoint startPathPoint = this.openPoint(startPos.getX(), startPos.getY(), startPos.getZ(), packed);
 		startPathPoint.nodeType = unpackNodeType(packed);
 		startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
@@ -179,7 +179,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		startPos = this.findSuitableStartingPosition(startPos, startPathPoint);
 
 		if(!initialStartPos.equals(startPos)) {
-			packed = this.getDirectionalPathNodeTypeCached(this.entity, startPos.getX(), startPos.getY(), startPos.getZ());
+			packed = this.removeNonStartingSides(this.getDirectionalPathNodeTypeCached(this.entity, startPos.getX(), startPos.getY(), startPos.getZ()));
 			startPathPoint = this.openPoint(startPos.getX(), startPos.getY(), startPos.getZ(), packed);
 			startPathPoint.nodeType = unpackNodeType(packed);
 			startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
@@ -189,7 +189,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 			AxisAlignedBB aabb = this.entity.getBoundingBox();
 
 			if(this.isSafeStartingPosition(checkPos.setPos(aabb.minX, by, aabb.minZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.minX, by, aabb.maxZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.maxX, by, aabb.minZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.maxX, by, aabb.maxZ))) {
-				packed = this.getDirectionalPathNodeTypeCached(this.entity, checkPos.getX(), checkPos.getY(), checkPos.getZ());
+				packed = this.removeNonStartingSides(this.getDirectionalPathNodeTypeCached(this.entity, checkPos.getX(), checkPos.getY(), checkPos.getZ()));
 				startPathPoint = this.openPoint(checkPos.getX(), checkPos.getY(), checkPos.getZ(), packed);
 				startPathPoint.nodeType = unpackNodeType(packed);
 				startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
@@ -199,19 +199,40 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		return startPathPoint;
 	}
 
+	private long removeNonStartingSides(long packed) {
+		long newPacked = packed & ~0xFFFFFFFFL;
+
+		for(Direction side : DIRECTIONS) {
+			if(unpackDirection(side, packed) && this.isValidStartingSide(side)) {
+				newPacked = packDirection(side, newPacked);
+			}
+		}
+
+		return newPacked;
+	}
+
+	protected boolean isValidStartingSide(Direction side) {
+		Direction groundSide = this.advancedPathFindingEntity.getGroundSide();
+		return side == groundSide || side.getAxis() != groundSide.getAxis();
+	}
+
 	protected BlockPos findSuitableStartingPosition(BlockPos pos, DirectionalPathPoint startPathPoint) {
-		if(startPathPoint.directions.length == 0) {
+		if(startPathPoint.getPathableSides().length == 0) {
 			Direction avoidedOffset = this.advancedPathFindingEntity.getGroundSide().getOpposite();
 
-			for(Direction offset : DIRECTIONS) {
-				if(offset != avoidedOffset) {
-					BlockPos offsetPos = pos.offset(offset);
+			for(int xo = -1; xo <= 1; xo++) {
+				for(int yo = -1; yo <= 1; yo++) {
+					for(int zo = -1; zo <= 1; zo++) {
+						if(xo != avoidedOffset.getXOffset() && yo != avoidedOffset.getYOffset() && zo != avoidedOffset.getZOffset()) {
+							BlockPos offsetPos = pos.add(xo, yo, zo);
 
-					long packed = this.getDirectionalPathNodeTypeCached(this.entity, offsetPos.getX(), offsetPos.getY(), offsetPos.getZ());
-					PathNodeType nodeType = unpackNodeType(packed);
+							long packed = this.getDirectionalPathNodeTypeCached(this.entity, offsetPos.getX(), offsetPos.getY(), offsetPos.getZ());
+							PathNodeType nodeType = unpackNodeType(packed);
 
-					if(nodeType == PathNodeType.WALKABLE && unpackDirection(packed)) {
-						return offsetPos;
+							if(nodeType == PathNodeType.WALKABLE && unpackDirection(packed)) {
+								return offsetPos;
+							}
+						}
 					}
 				}
 			}
@@ -527,11 +548,14 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 
 		boolean isDiagonal = (dx ? 1 : 0) + (dy ? 1 : 0) + (dz ? 1 : 0) > 1;
 
-		for(int i = 0; i < from.directions.length; i++) {
-			Direction d1 = from.directions[i];
+		Direction[] fromDirections = from.getPathableSides();
+		Direction[] toDirections = to.getPathableSides();
 
-			for(int j = 0; j < to.directions.length; j++) {
-				Direction d2 = to.directions[j];
+		for(int i = 0; i < fromDirections.length; i++) {
+			Direction d1 = fromDirections[i];
+
+			for(int j = 0; j < toDirections.length; j++) {
+				Direction d2 = toDirections[j];
 
 				if(d1 == d2) {
 					return true;
@@ -554,11 +578,14 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 	}
 
 	protected static boolean isSharingDirection(DirectionalPathPoint from, DirectionalPathPoint to) {
-		for(int i = 0; i < from.directions.length; i++) {
-			Direction d1 = from.directions[i];
+		Direction[] fromDirections = from.getPathableSides();
+		Direction[] toDirections = to.getPathableSides();
 
-			for(int j = 0; j < to.directions.length; j++) {
-				Direction d2 = to.directions[j];
+		for(int i = 0; i < fromDirections.length; i++) {
+			Direction d1 = fromDirections[i];
+
+			for(int j = 0; j < toDirections.length; j++) {
+				Direction d2 = toDirections[j];
 
 				if(d1 == d2) {
 					return true;
@@ -809,23 +836,23 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 	}
 
 	static long packDirection(Direction facing, long packed) {
-		return packed | (1 << facing.ordinal());
+		return packed | (1L << facing.ordinal());
 	}
 
 	static long packDirection(long packed1, long packed2) {
-		return (packed1 & ~0xFFFFFFFF) | (packed1 & 0xFFFFFFFF) | (packed2 & 0xFFFFFFFF);
+		return (packed1 & ~0xFFFFFFFFL) | (packed1 & 0xFFFFFFFFL) | (packed2 & 0xFFFFFFFFL);
 	}
 
 	static boolean unpackDirection(Direction facing, long packed) {
-		return (packed & (1 << facing.ordinal())) != 0;
+		return (packed & (1L << facing.ordinal())) != 0;
 	}
 
 	static boolean unpackDirection(long packed) {
-		return (packed & 0xFFFFFFFF) != 0;
+		return (packed & 0xFFFFFFFFL) != 0;
 	}
 
 	static long packNodeType(PathNodeType type, long packed) {
-		return ((long) type.ordinal() << 32) | (packed & 0xFFFFFFFF);
+		return ((long) type.ordinal() << 32) | (packed & 0xFFFFFFFFL);
 	}
 
 	static PathNodeType unpackNodeType(long packed) {

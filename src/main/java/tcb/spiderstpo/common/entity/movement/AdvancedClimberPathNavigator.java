@@ -17,7 +17,9 @@ import net.minecraft.pathfinding.PathType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.IBlockReader;
 import net.minecraft.world.World;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.Orientation;
@@ -87,9 +89,52 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 			DebugPacketSender.sendPath(this.world, this.entity, this.currentPath, this.maxDistanceToWaypoint);
 
 			if(!this.noPath()) {
-				Vector3d targetPos = this.currentPath.getPosition(this.entity);
-				this.entity.getMoveHelper().setMoveTo(targetPos.x, targetPos.y, targetPos.z, this.speed); //Don't offset to ground pos
+				PathPoint targetPoint = this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex());
+
+				Direction dir = null;
+
+				if(targetPoint instanceof DirectionalPathPoint) {
+					dir = ((DirectionalPathPoint) targetPoint).getPathSide();
+				}
+
+				if(dir == null) {
+					dir = Direction.DOWN;
+				}
+
+				Vector3d targetPos = this.getGround(this.world, targetPoint.func_224759_a(), dir);
+
+				this.entity.getMoveHelper().setMoveTo(targetPos.x, targetPos.y, targetPos.z, this.speed);
 			}
+		}
+	}
+
+	public Vector3d getGround(IBlockReader blockaccess, BlockPos pos, Direction dir) {
+		BlockPos offsetPos = pos.offset(dir);
+
+		VoxelShape shape = blockaccess.getBlockState(offsetPos).getCollisionShape(blockaccess, offsetPos);
+
+		Direction.Axis axis = dir.getAxis();
+
+		int sign = dir.getXOffset() + dir.getYOffset() + dir.getZOffset();
+		double offset = shape.isEmpty() ? sign /*undo offset if no collider*/ : (sign > 0 ? shape.getStart(axis) - 1 : shape.getEnd(axis));
+
+		double marginXZ = 1 - (this.entity.getWidth() % 1);
+		double marginY = 1 - (this.entity.getHeight() % 1);
+
+		double pathingOffsetXZ = (int)(this.entity.getWidth() + 1.0F) * 0.5D;
+
+		double x = offsetPos.getX() + pathingOffsetXZ + dir.getXOffset() * (0.1D + marginXZ);
+		double y = offsetPos.getY() + (dir == Direction.DOWN ? -0.1D : 0.0D) + (dir == Direction.UP ? 0.1D + marginY : 0.0D);
+		double z = offsetPos.getZ() + pathingOffsetXZ + dir.getZOffset() * (0.1D + marginXZ);
+
+		switch(axis) {
+		default:
+		case X:
+			return new Vector3d(x + offset, y, z);
+		case Y:
+			return new Vector3d(x, y + offset, z);
+		case Z:
+			return new Vector3d(x, y, z + offset);
 		}
 	}
 
@@ -120,32 +165,8 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 		if(this.getCanSwim() && (currentTarget.nodeType == PathNodeType.WATER || currentTarget.nodeType == PathNodeType.WATER_BORDER || currentTarget.nodeType == PathNodeType.LAVA)) {
 			isOnSameSideAsTarget = true;
 		} else if(currentTarget instanceof DirectionalPathPoint) {
-			PathPoint nextTarget = this.currentPath.getCurrentPathIndex() < this.currentPath.getCurrentPathLength() - 1 ? this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex() + 1) : null;
-
-			Direction[] nextTargetSides;
-			if(nextTarget instanceof DirectionalPathPoint == false || nextTarget == null || (this.getCanSwim() && (nextTarget.nodeType == PathNodeType.WATER || nextTarget.nodeType == PathNodeType.WATER_BORDER || nextTarget.nodeType == PathNodeType.LAVA))) {
-				nextTargetSides = null;
-			} else {
-				nextTargetSides = ((DirectionalPathPoint) nextTarget).directions;
-			}
-
-			DirectionalPathPoint currentDirectionalTarget = (DirectionalPathPoint) currentTarget;
-
-			Direction groundSide = this.climber.getGroundDirection().getLeft();
-
-			for(Direction targetSide : currentDirectionalTarget.directions) {
-				if(targetSide == groundSide) {
-					boolean isCompatibleWithNextTarget = nextTargetSides == null ||
-							Arrays.stream(nextTargetSides).anyMatch(nextTargetSide -> {
-								return (targetSide == nextTargetSide || targetSide.getAxis() != nextTargetSide.getAxis());
-							});
-
-					if(isCompatibleWithNextTarget) {
-						isOnSameSideAsTarget = true;
-						break;
-					}
-				}
-			}
+			Direction targetSide = ((DirectionalPathPoint) currentTarget).getPathSide();
+			isOnSameSideAsTarget = targetSide == null || this.climber.getGroundDirection().getLeft() == targetSide;
 		} else {
 			isOnSameSideAsTarget = true;
 		}
