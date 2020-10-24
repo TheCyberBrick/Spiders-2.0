@@ -91,8 +91,9 @@ public abstract class EntityMixin implements IEntityMovementHook, IEntityReadWri
 			target = "Lnet/minecraft/entity/Entity;registerData()V"
 			))
 	private void onRegisterData(Entity _this) {
+		this.shadow$registerData();
+		
 		if(_this == (Object) this) {
-			this.shadow$registerData();
 			this.onRegisterData();
 		}
 	}

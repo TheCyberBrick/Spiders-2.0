@@ -98,14 +98,22 @@ public class ClientEventHandlers {
 						for(PathingTarget pathingTarget : pathingTargets) {
 							BlockPos pos = pathingTarget.pos;
 
-							WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pos).offset(-rx - x, -ry - y, -rz - z), 1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f);
-
+                            WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pos).offset(-rx - x, -ry - y, -rz - z), 1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 0.15f);
+							
 							matrixStack.push();
 							matrixStack.translate(pos.getX() + 0.5D - rx - x, pos.getY() + 0.5D - ry - y, pos.getZ() + 0.5D - rz - z);
 
 							matrixStack.rotate(pathingTarget.side.getOpposite().getRotation());
 
-							WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(-0.501D, -0.501D, -0.501D, 0.501D, -0.48D, 0.501D), 1.0f, 1.0f, 1.0f, 1.0f);
+							WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(-0.501D, -0.501D, -0.501D, 0.501D, -0.45D, 0.501D), 1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f);
+
+							Matrix4f matrix4f = matrixStack.getLast().getMatrix();
+							IVertexBuilder builder = bufferIn.getBuffer(RenderType.LINES);
+
+							builder.pos(matrix4f, -0.501f, -0.45f, -0.501f).color(1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f).endVertex();
+							builder.pos(matrix4f, 0.501f, -0.45f, 0.501f).color(1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f).endVertex();
+							builder.pos(matrix4f, -0.501f, -0.45f, 0.501f).color(1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f).endVertex();
+							builder.pos(matrix4f, 0.501f, -0.45f, -0.501f).color(1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f).endVertex();
 
 							matrixStack.pop();
 

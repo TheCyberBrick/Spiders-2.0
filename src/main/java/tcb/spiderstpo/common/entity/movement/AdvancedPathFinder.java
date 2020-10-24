@@ -34,7 +34,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 			this.side = pathPoint.getPathSide();
 		}
 
-		private Node(@Nullable Node previous, int depth, DirectionalPathPoint pathPoint) {
+		private Node(Node previous, int depth, DirectionalPathPoint pathPoint) {
 			this.previous = previous;
 			this.depth = depth;
 			this.pathPoint = pathPoint;
@@ -151,26 +151,108 @@ public class AdvancedPathFinder extends CustomPathFinder {
 
 			DirectionalPathPoint next = this.ensureDirectional(points.get(current.depth + 1));
 
-			for(Direction nextDir : next.getPathableSides()) {
-				for(Direction currentDir : current.pathPoint.getPathableSides()) {
-					Node node = null;
+			for(Direction nextSide : next.getPathableSides()) {
+				Direction currentSide = current.side;
 
-					if(nextDir == currentDir) {
+				Node nextNode = null;
+
+				int dx = next.x - current.pathPoint.x;
+				int dy = next.y - current.pathPoint.y;
+				int dz = next.z - current.pathPoint.z;
+
+				int adx = Math.abs(dx);
+				int ady = Math.abs(dy);
+				int adz = Math.abs(dz);
+
+				int d = adx + ady + adz;
+
+				if(d == 1) {
+					//Path is straight line
+
+					if(nextSide == currentSide) {
+
 						//Allow movement on the same side
-						node = new Node(current, next.assignPathSide(nextDir));
-					} else if(nextDir.getAxis() != currentDir.getAxis()) {
-						if(Math.abs(next.x - current.pathPoint.x) + Math.abs(next.y - current.pathPoint.y) + Math.abs(next.z - current.pathPoint.z) == 1) {
-							//Allow movement around corners, but insert new point at next position but with previous side
-							Node intermediary = new Node(current, next.assignPathSide(currentDir));
-							node = new Node(intermediary, intermediary.depth, next.assignPathSide(nextDir));
-						} else {
-							node = new Node(current, next.assignPathSide(nextDir));
-						}
-					}
+						nextNode = new Node(current, next.assignPathSide(nextSide));
 
-					if(node != null && checkedSet.add(node)) {
-						queue.addLast(node);
+					} else if(nextSide.getAxis() != currentSide.getAxis()) {
+
+						//Allow movement around corners, but insert new point with transitional side inbetween
+
+						Node intermediary;
+						if(Math.abs(currentSide.getXOffset()) == adx && Math.abs(currentSide.getYOffset()) == ady && Math.abs(currentSide.getZOffset()) == adz) {
+							intermediary = new Node(current, current.pathPoint.assignPathSide(nextSide));
+						} else {
+							intermediary = new Node(current, next.assignPathSide(currentSide));
+						}
+
+						nextNode = new Node(intermediary, intermediary.depth, next.assignPathSide(nextSide));
+
 					}
+				} else if(d == 2) {
+					//Simple diagonal
+
+					int currentSidePlaneMatch = (currentSide.getXOffset() == -dx ? 1 : 0) + (currentSide.getYOffset() == -dy ? 1 : 0) + (currentSide.getZOffset() == -dz ? 1 : 0);
+					int nextSidePlaneMatch = (nextSide.getXOffset() == dx ? 1 : 0) + (nextSide.getYOffset() == dy ? 1 : 0) + (nextSide.getZOffset() == dz ? 1 : 0);
+
+					boolean isCurrentSideInPlane = currentSidePlaneMatch == 2;
+					boolean isNextSideInPlane = nextSidePlaneMatch == 2;
+
+					if(currentSide == nextSide || (isCurrentSideInPlane && isNextSideInPlane)) {
+
+						if(currentSide == nextSide && currentSidePlaneMatch == 0) {
+
+							//Allow diagonal movement, no need to insert transitional side since the diagonal's plane's normal is the same as the path's side
+							nextNode = new Node(current, next.assignPathSide(nextSide));
+
+						} else {
+							//Allow movement, but insert new point with transitional side inbetween
+
+							Node intermediary = null;
+							if(isCurrentSideInPlane) {
+								for(Direction intermediarySide : current.pathPoint.getPathableSides()) {
+									if(intermediarySide != currentSide && (intermediarySide.getXOffset() == -dx ? 1 : 0) + (intermediarySide.getYOffset() == -dy ? 1 : 0) + (intermediarySide.getZOffset() == -dz ? 1 : 0) == 2) {
+										intermediary = new Node(current, current.pathPoint.assignPathSide(intermediarySide));
+										break;
+									}
+								}
+							} else {
+								for(Direction intermediarySide : next.getPathableSides()) {
+									if(intermediarySide != nextSide && (intermediarySide.getXOffset() == -dx ? 1 : 0) + (intermediarySide.getYOffset() == -dy ? 1 : 0) + (intermediarySide.getZOffset() == -dz ? 1 : 0) == 2) {
+										intermediary = new Node(current, next.assignPathSide(intermediarySide));
+										break;
+									}
+								}
+							}
+
+							if(intermediary != null) {
+								nextNode = new Node(intermediary, intermediary.depth, next.assignPathSide(nextSide));
+							}
+						}
+
+					} else {
+						//Allow diagonal movement, insert new point with transitional side inbetween if necessary
+
+						Node intermediary = null;
+						if(isCurrentSideInPlane) {
+							intermediary = new Node(current, current.pathPoint.assignPathSide(nextSide));
+						} else if(isNextSideInPlane) {
+							intermediary = new Node(current, next.assignPathSide(currentSide));
+						}
+
+						if(intermediary != null) {
+							nextNode = new Node(intermediary, intermediary.depth, next.assignPathSide(nextSide));
+						} else {
+							nextNode = new Node(current, next.assignPathSide(nextSide));
+						}
+
+					}
+				} else {
+					//TODO
+					nextNode = new Node(current, next.assignPathSide(nextSide));
+				}
+
+				if(nextNode != null && checkedSet.add(nextNode)) {
+					queue.addLast(nextNode);
 				}
 			}
 		}

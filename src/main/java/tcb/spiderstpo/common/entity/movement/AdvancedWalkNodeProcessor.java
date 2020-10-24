@@ -379,7 +379,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 			boolean foundDiagonal = false;
 
 			for(int k = 0; k < pathsPXPZ.length; k++) {
-				if(this.isSuitablePoint(pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsPZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsPXPZ[k], currentPoint, this.checkObstructions, fitsThroughPoles, is3DPathing)) {
+				if(this.isSuitablePoint(pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsPZ, currentPoint.x, currentPoint.y, currentPoint.z + 1, pathsPXPZ[k], currentPoint, this.checkObstructions, fitsThroughPoles, is3DPathing)) {
 					pathOptions[openedNodeCount++] = pathsPXPZ[k];
 					foundDiagonal = true;
 				}
@@ -470,7 +470,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 				DirectionalPathPoint[] pathsPYNX = this.getSafePoints(currentPoint.x - 1, currentPoint.y + 1, currentPoint.z, stepHeight, height, NXPY, this.checkObstructions);
 
 				for(int k = 0; k < pathsPYNX.length; k++) {
-					if(this.isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsNZ, currentPoint.x, currentPoint.y, currentPoint.z - 1, pathsPYNX[k], currentPoint, this.checkObstructions, fitsThroughPoles, is3DPathing)) {
+					if(this.isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y + 1, currentPoint.z, pathsNZ, currentPoint.x - 1, currentPoint.y, currentPoint.z, pathsPYNX[k], currentPoint, this.checkObstructions, fitsThroughPoles, is3DPathing)) {
 						pathOptions[openedNodeCount++] = pathsPYNX[k];
 					}
 				}
@@ -492,7 +492,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 					pathsPYPX = this.getSafePoints(currentPoint.x + 1, currentPoint.y + this.entitySizeY, currentPoint.z, stepHeight, height, PXPY, this.checkObstructions);
 
 					for(int k = 0; k < pathsPYPX.length; k++) {
-						if(this.isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y - 1, currentPoint.z, pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsPYPX[k], currentPoint, this.checkObstructions, fitsThroughPoles, is3DPathing)) {
+						if(this.isSuitablePoint(pathsPY, currentPoint.x, currentPoint.y + 1, currentPoint.z, pathsPX, currentPoint.x + 1, currentPoint.y, currentPoint.z, pathsPYPX[k], currentPoint, this.checkObstructions, fitsThroughPoles, is3DPathing)) {
 							pathOptions[openedNodeCount++] = pathsPYPX[k];
 						}
 					}
@@ -682,7 +682,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 				result[0] = directPathPoint;
 				return result;
 			} else {
-				if (directPathPoint == null && stepHeight > 0 && nodeType != PathNodeType.FENCE && nodeType != PathNodeType.TRAPDOOR && direction.getY() == 0 && Math.abs(direction.getX()) + Math.abs(direction.getY()) + Math.abs(direction.getZ()) == 1) {
+				if (directPathPoint == null && stepHeight > 0 && nodeType != PathNodeType.FENCE && nodeType != PathNodeType.UNPASSABLE_RAIL && nodeType != PathNodeType.TRAPDOOR && direction.getY() == 0 && Math.abs(direction.getX()) + Math.abs(direction.getY()) + Math.abs(direction.getZ()) == 1) {
 					DirectionalPathPoint[] pointsAbove = this.getSafePoints(x, y + 1, z, stepHeight - 1, height, direction, false);
 					directPathPoint = pointsAbove.length > 0 ? pointsAbove[0] : null;
 
@@ -982,7 +982,9 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 					}
 
 					if(nodeType == PathNodeType.WALKABLE) {
-						packed = packDirection(pathableFacing, packed);
+						if(isColliderNodeType(offsetNodeType)) {
+							packed = packDirection(pathableFacing, packed);
+						}
 						isWalkable = true;
 					}
 				}
@@ -994,5 +996,11 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		}
 
 		return packNodeType(nodeType, packed);
+	}
+
+	protected static boolean isColliderNodeType(PathNodeType type) {
+		return type == PathNodeType.BLOCKED || type == PathNodeType.TRAPDOOR || type == PathNodeType.FENCE ||
+				type == PathNodeType.DOOR_WOOD_CLOSED || type == PathNodeType.DOOR_IRON_CLOSED || type == PathNodeType.LEAVES ||
+				type == PathNodeType.STICKY_HONEY || type == PathNodeType.COCOA;
 	}
 }
