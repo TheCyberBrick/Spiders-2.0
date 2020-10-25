@@ -1,7 +1,5 @@
 package tcb.spiderstpo.common.entity.movement;
 
-import java.util.Arrays;
-
 import javax.annotation.Nullable;
 
 import com.google.common.collect.ImmutableSet;
@@ -144,13 +142,6 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 
 		this.maxDistanceToWaypoint = this.entity.getWidth() > 0.75F ? this.entity.getWidth() / 2.0F : 0.75F - this.entity.getWidth() / 2.0F;
 		float maxDistanceToWaypointY = Math.max(1 /*required for e.g. slabs*/, this.entity.getHeight() > 0.75F ? this.entity.getHeight() / 2.0F : 0.75F - this.entity.getHeight() / 2.0F);
-		PathPoint currentTarget = this.currentPath.func_237225_h_(); //getCurrentPos
-
-		double dx = Math.abs(currentTarget.x + (int) (this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosX());
-		double dy = Math.abs(currentTarget.y - this.entity.getPosY());
-		double dz = Math.abs(currentTarget.z + (int) (this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosZ());
-
-		boolean isWaypointInReach = dx < this.maxDistanceToWaypoint && dy < maxDistanceToWaypointY && dz < this.maxDistanceToWaypoint;
 
 		int sizeX = MathHelper.ceil(this.entity.getWidth());
 		int sizeY = MathHelper.ceil(this.entity.getHeight());
@@ -161,18 +152,32 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 
 		this.verticalFacing = Direction.getFacingFromVector((float) upVector.x, (float) upVector.y, (float) upVector.z);
 
-		boolean isOnSameSideAsTarget = false;
-		if(this.getCanSwim() && (currentTarget.nodeType == PathNodeType.WATER || currentTarget.nodeType == PathNodeType.WATER_BORDER || currentTarget.nodeType == PathNodeType.LAVA)) {
-			isOnSameSideAsTarget = true;
-		} else if(currentTarget instanceof DirectionalPathPoint) {
-			Direction targetSide = ((DirectionalPathPoint) currentTarget).getPathSide();
-			isOnSameSideAsTarget = targetSide == null || this.climber.getGroundDirection().getLeft() == targetSide;
-		} else {
-			isOnSameSideAsTarget = true;
-		}
+		//Look up to 3 nodes ahead so it doesn't backtrack on positions with multiple path sides when changing/updating path
+		for(int i = 3; i >= 0; i--) {
+			if(this.currentPath.getCurrentPathIndex() + i < this.currentPath.getCurrentPathLength()) {
+				PathPoint currentTarget = this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex() + i);
 
-		if(isOnSameSideAsTarget && (isWaypointInReach || (this.entity.func_233660_b_(this.currentPath.func_237225_h_().nodeType) && this.isNextTargetInLine(pos, sizeX, sizeY, sizeZ)))) {
-			this.currentPath.setCurrentPathIndex(this.currentPath.getCurrentPathIndex() + 1);
+				double dx = Math.abs(currentTarget.x + (int) (this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosX());
+				double dy = Math.abs(currentTarget.y - this.entity.getPosY());
+				double dz = Math.abs(currentTarget.z + (int) (this.entity.getWidth() + 1.0f) * 0.5f - this.entity.getPosZ());
+
+				boolean isWaypointInReach = dx < this.maxDistanceToWaypoint && dy < maxDistanceToWaypointY && dz < this.maxDistanceToWaypoint;
+
+				boolean isOnSameSideAsTarget = false;
+				if(this.getCanSwim() && (currentTarget.nodeType == PathNodeType.WATER || currentTarget.nodeType == PathNodeType.WATER_BORDER || currentTarget.nodeType == PathNodeType.LAVA)) {
+					isOnSameSideAsTarget = true;
+				} else if(currentTarget instanceof DirectionalPathPoint) {
+					Direction targetSide = ((DirectionalPathPoint) currentTarget).getPathSide();
+					isOnSameSideAsTarget = targetSide == null || this.climber.getGroundDirection().getLeft() == targetSide;
+				} else {
+					isOnSameSideAsTarget = true;
+				}
+
+				if(isOnSameSideAsTarget && (isWaypointInReach || (i == 0 && this.entity.func_233660_b_(this.currentPath.func_237225_h_().nodeType) && this.isNextTargetInLine(pos, sizeX, sizeY, sizeZ, 1 + i)))) {
+					this.currentPath.setCurrentPathIndex(this.currentPath.getCurrentPathIndex() + 1 + i);
+					break;
+				}
+			}
 		}
 
 		if(this.findDirectPathPoints) {
@@ -218,8 +223,8 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 		this.checkForStuck(pos);
 	}
 
-	private boolean isNextTargetInLine(Vector3d pos, int sizeX, int sizeY, int sizeZ) {
-		if(this.currentPath.getCurrentPathIndex() + 1 >= this.currentPath.getCurrentPathLength()) {
+	private boolean isNextTargetInLine(Vector3d pos, int sizeX, int sizeY, int sizeZ, int offset) {
+		if(this.currentPath.getCurrentPathIndex() + offset >= this.currentPath.getCurrentPathLength()) {
 			return false;
 		} else {
 			Vector3d currentTarget = Vector3d.func_237492_c_(this.currentPath.func_242948_g());
@@ -227,7 +232,7 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 			if(!pos.func_237488_a_(currentTarget, 2.0D)) {
 				return false;
 			} else {
-				Vector3d nextTarget = Vector3d.func_237492_c_(this.currentPath.func_242947_d(this.currentPath.getCurrentPathIndex() + 1));
+				Vector3d nextTarget = Vector3d.func_237492_c_(this.currentPath.func_242947_d(this.currentPath.getCurrentPathIndex() + offset));
 				Vector3d targetDir = nextTarget.subtract(currentTarget);
 				Vector3d currentDir = pos.subtract(currentTarget);
 

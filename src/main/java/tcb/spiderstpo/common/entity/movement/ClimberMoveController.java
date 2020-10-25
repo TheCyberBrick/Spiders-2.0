@@ -52,6 +52,8 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 
 				this.mob.setAIMoveSpeed((float) speed);
 
+				//TODO Detect jump based on path side, i.e. path navigator should tell the movement controller which side is currently being moved towards
+				//TODO Make jumps work on walls
 				if(this.posY >= this.mob.getPosY() + this.mob.getHeight() && this.climber.getGroundDirection().getLeft() == Direction.DOWN) {
 					this.mob.getJumpController().setJumping();
 					this.action = MovementController.Action.JUMPING;

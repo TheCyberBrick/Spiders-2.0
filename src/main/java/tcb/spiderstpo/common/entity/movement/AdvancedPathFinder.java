@@ -17,10 +17,6 @@ import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 
 public class AdvancedPathFinder extends CustomPathFinder {
-	public AdvancedPathFinder(NodeProcessor processor, int maxExpansions) {
-		super(processor, maxExpansions);
-	}
-
 	private static class Node {
 		private final Node previous;
 		private final DirectionalPathPoint pathPoint;
@@ -76,6 +72,12 @@ public class AdvancedPathFinder extends CustomPathFinder {
 		}
 	}
 
+	private static final Direction[] DOWN = new Direction[] { Direction.DOWN };
+
+	public AdvancedPathFinder(NodeProcessor processor, int maxExpansions) {
+		super(processor, maxExpansions);
+	}
+
 	@Override
 	protected Path createPath(PathPoint _targetPoint, BlockPos target, boolean isTargetReached) {
 		List<PathPoint> points = new ArrayList<>();
@@ -118,6 +120,14 @@ public class AdvancedPathFinder extends CustomPathFinder {
 		}
 	}
 
+	private static Direction[] getPathableSidesWithFallback(DirectionalPathPoint point) {
+		if(point.getPathableSides().length == 0) {
+			return DOWN;
+		} else {
+			return point.getPathableSides();
+		}
+	}
+
 	private Node retraceSidedPath(List<PathPoint> points) {
 		if(points.isEmpty()) {
 			return null;
@@ -127,7 +137,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 
 		final DirectionalPathPoint targetPoint = this.ensureDirectional(points.get(0));
 
-		for(Direction direction : targetPoint.getPathableSides()) {
+		for(Direction direction : getPathableSidesWithFallback(targetPoint)) {
 			queue.add(new Node(null, targetPoint.assignPathSide(direction)));
 		}
 
@@ -151,14 +161,14 @@ public class AdvancedPathFinder extends CustomPathFinder {
 
 			DirectionalPathPoint next = this.ensureDirectional(points.get(current.depth + 1));
 
-			for(Direction nextSide : next.getPathableSides()) {
+			for(Direction nextSide : getPathableSidesWithFallback(next)) {
 				Direction currentSide = current.side;
 
 				Node nextNode = null;
 
-				int dx = next.x - current.pathPoint.x;
-				int dy = next.y - current.pathPoint.y;
-				int dz = next.z - current.pathPoint.z;
+				int dx = (int)Math.signum(next.x - current.pathPoint.x);
+				int dy = (int)Math.signum(next.y - current.pathPoint.y);
+				int dz = (int)Math.signum(next.z - current.pathPoint.z);
 
 				int adx = Math.abs(dx);
 				int ady = Math.abs(dy);
@@ -189,54 +199,33 @@ public class AdvancedPathFinder extends CustomPathFinder {
 
 					}
 				} else if(d == 2) {
-					//Simple diagonal
+					//Diagonal
 
 					int currentSidePlaneMatch = (currentSide.getXOffset() == -dx ? 1 : 0) + (currentSide.getYOffset() == -dy ? 1 : 0) + (currentSide.getZOffset() == -dz ? 1 : 0);
-					int nextSidePlaneMatch = (nextSide.getXOffset() == dx ? 1 : 0) + (nextSide.getYOffset() == dy ? 1 : 0) + (nextSide.getZOffset() == dz ? 1 : 0);
 
-					boolean isCurrentSideInPlane = currentSidePlaneMatch == 2;
-					boolean isNextSideInPlane = nextSidePlaneMatch == 2;
+					if(currentSide == nextSide && currentSidePlaneMatch == 0) {
 
-					if(currentSide == nextSide || (isCurrentSideInPlane && isNextSideInPlane)) {
-
-						if(currentSide == nextSide && currentSidePlaneMatch == 0) {
-
-							//Allow diagonal movement, no need to insert transitional side since the diagonal's plane's normal is the same as the path's side
-							nextNode = new Node(current, next.assignPathSide(nextSide));
-
-						} else {
-							//Allow movement, but insert new point with transitional side inbetween
-
-							Node intermediary = null;
-							if(isCurrentSideInPlane) {
-								for(Direction intermediarySide : current.pathPoint.getPathableSides()) {
-									if(intermediarySide != currentSide && (intermediarySide.getXOffset() == -dx ? 1 : 0) + (intermediarySide.getYOffset() == -dy ? 1 : 0) + (intermediarySide.getZOffset() == -dz ? 1 : 0) == 2) {
-										intermediary = new Node(current, current.pathPoint.assignPathSide(intermediarySide));
-										break;
-									}
-								}
-							} else {
-								for(Direction intermediarySide : next.getPathableSides()) {
-									if(intermediarySide != nextSide && (intermediarySide.getXOffset() == -dx ? 1 : 0) + (intermediarySide.getYOffset() == -dy ? 1 : 0) + (intermediarySide.getZOffset() == -dz ? 1 : 0) == 2) {
-										intermediary = new Node(current, next.assignPathSide(intermediarySide));
-										break;
-									}
-								}
-							}
-
-							if(intermediary != null) {
-								nextNode = new Node(intermediary, intermediary.depth, next.assignPathSide(nextSide));
-							}
-						}
+						//Allow diagonal movement, no need to insert transitional side since the diagonal's plane's normal is the same as the path's side
+						nextNode = new Node(current, next.assignPathSide(nextSide));
 
 					} else {
-						//Allow diagonal movement, insert new point with transitional side inbetween if necessary
+						//Allow movement, but insert new point with transitional side inbetween
 
 						Node intermediary = null;
-						if(isCurrentSideInPlane) {
-							intermediary = new Node(current, current.pathPoint.assignPathSide(nextSide));
-						} else if(isNextSideInPlane) {
-							intermediary = new Node(current, next.assignPathSide(currentSide));
+						if(currentSidePlaneMatch == 2) {
+							for(Direction intermediarySide : getPathableSidesWithFallback(current.pathPoint)) {
+								if(intermediarySide != currentSide && (intermediarySide.getXOffset() == dx ? 1 : 0) + (intermediarySide.getYOffset() == dy ? 1 : 0) + (intermediarySide.getZOffset() == dz ? 1 : 0) == 2) {
+									intermediary = new Node(current, current.pathPoint.assignPathSide(intermediarySide));
+									break;
+								}
+							}
+						} else {
+							for(Direction intermediarySide : getPathableSidesWithFallback(next)) {
+								if(intermediarySide != nextSide && (intermediarySide.getXOffset() == -dx ? 1 : 0) + (intermediarySide.getYOffset() == -dy ? 1 : 0) + (intermediarySide.getZOffset() == -dz ? 1 : 0) == 2) {
+									intermediary = new Node(current, next.assignPathSide(intermediarySide));
+									break;
+								}
+							}
 						}
 
 						if(intermediary != null) {
@@ -244,11 +233,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 						} else {
 							nextNode = new Node(current, next.assignPathSide(nextSide));
 						}
-
 					}
-				} else {
-					//TODO
-					nextNode = new Node(current, next.assignPathSide(nextSide));
 				}
 
 				if(nextNode != null && checkedSet.add(nextNode)) {
