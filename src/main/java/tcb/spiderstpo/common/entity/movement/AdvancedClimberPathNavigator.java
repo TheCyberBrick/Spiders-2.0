@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableSet;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.ai.controller.MovementController;
 import net.minecraft.network.DebugPacketSender;
 import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathNodeType;
@@ -40,11 +41,6 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 			processor.setCanPathWalls(canPathWalls);
 			processor.setCanPathCeiling(canPathCeiling);
 		}
-	}
-
-	@Override
-	protected boolean canNavigate() {
-		return !this.isInLiquid() || this.getCanSwim() && this.isInLiquid() || this.entity.getRidingEntity() == null;
 	}
 
 	@Override
@@ -101,7 +97,13 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 
 				Vector3d targetPos = this.getGround(this.world, targetPoint.func_224759_a(), dir);
 
-				this.entity.getMoveHelper().setMoveTo(targetPos.x, targetPos.y, targetPos.z, this.speed);
+				MovementController moveController = this.entity.getMoveHelper();
+
+				if(moveController instanceof ClimberMoveController && targetPoint instanceof DirectionalPathPoint && ((DirectionalPathPoint) targetPoint).getPathSide() != null) {
+					((ClimberMoveController) moveController).setMoveTo(targetPos.x, targetPos.y, targetPos.z, ((DirectionalPathPoint) targetPoint).getPathSide(), this.speed);
+				} else {
+					moveController.setMoveTo(targetPos.x, targetPos.y, targetPos.z, this.speed);
+				}
 			}
 		}
 	}

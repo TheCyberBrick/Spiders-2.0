@@ -46,11 +46,19 @@ public abstract class BetterSpiderEntityMixin extends MonsterEntity implements I
 			))
 	private void onAddGoal(GoalSelector selector, int priority, Goal task) {
 		if(task.getClass() == LeapAtTargetGoal.class) {
-			//TODO Implement custom leap task
+			/*selector.addGoal(priority, new LeapAtTargetGoal(this, 0.4f) {
+				@Override
+				public boolean shouldExecute() {
+					// TODO Do some more strict checking so that it only leaps if it doesn't interrupt the path
+					return super.shouldExecute();
+				}
+			});*/
 		} else {
 			selector.addGoal(priority, task);
 		}
 	}
+	
+	//TODO Increase follow range again
 
 	@Override
 	public boolean shouldTrackPathingTargets() {

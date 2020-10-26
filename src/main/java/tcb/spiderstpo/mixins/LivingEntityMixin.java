@@ -12,11 +12,12 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.util.math.vector.Vector3d;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityDataManagerHook;
+import tcb.spiderstpo.common.entity.mob.ILivingEntityJumpHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityLookAtHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityTravelHook;
 
 @Mixin(LivingEntity.class)
-public abstract class LivingEntityMixin implements ILivingEntityLookAtHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook {
+public abstract class LivingEntityMixin implements ILivingEntityLookAtHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook, ILivingEntityJumpHook {
 	@ModifyVariable(method = "lookAt(Lnet/minecraft/command/arguments/EntityAnchorArgument$Type;Lnet/minecraft/util/math/vector/Vector3d;)V", at = @At("HEAD"), ordinal = 0)
 	private Vector3d onLookAtModify(Vector3d vec, EntityAnchorArgument.Type anchor, Vector3d vec2) {
 		return this.onLookAt(anchor, vec);
@@ -49,6 +50,18 @@ public abstract class LivingEntityMixin implements ILivingEntityLookAtHook, ILiv
 
 	@Override
 	public boolean onTravel(Vector3d relative, boolean pre) {
+		return false;
+	}
+
+	@Inject(method = "jump()V", at = @At("HEAD"), cancellable = true)
+	private void onJump(CallbackInfo ci) {
+		if(this.onJump()) {
+			ci.cancel();
+		}
+	}
+
+	@Override
+	public boolean onJump() {
 		return false;
 	}
 }

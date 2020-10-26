@@ -59,4 +59,6 @@ public interface IClimberEntity extends IAdvancedPathFindingEntity {
 	public float getCollisionsSmoothingRange();
 
 	public void setCollisionsSmoothingRange(float range);
+	
+	public void setJumpDirection(@Nullable Vector3d dir);
 }

@@ -22,7 +22,7 @@ public abstract class MobEntityMixin implements IMobEntityLivingTickHook, IMobEn
 	@Override
 	public void onLivingTick() { }
 
-	@Inject(method = "tick()V", at = @At("HEAD"))
+	@Inject(method = "tick()V", at = @At("RETURN"))
 	private void onTick(CallbackInfo ci) {
 		this.onTick();
 	}
