@@ -167,7 +167,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true)
 	private void onCreateNavigator(World world, CallbackInfoReturnable<PathNavigator> ci) {
-		BetterSpiderPathNavigator<ClimberEntityMixin> navigate = new BetterSpiderPathNavigator<ClimberEntityMixin>(this, world);
+		BetterSpiderPathNavigator<ClimberEntityMixin> navigate = new BetterSpiderPathNavigator<ClimberEntityMixin>(this, world, false);
 		navigate.setCanSwim(true);
 		ci.setReturnValue(navigate);
 	}

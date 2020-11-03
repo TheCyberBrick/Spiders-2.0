@@ -95,7 +95,7 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 					dir = Direction.DOWN;
 				}
 
-				Vector3d targetPos = this.getGround(this.world, targetPoint.func_224759_a(), dir);
+				Vector3d targetPos = this.getExactPathingTarget(this.world, targetPoint.func_224759_a(), dir);
 
 				MovementController moveController = this.entity.getMoveHelper();
 
@@ -108,7 +108,7 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 		}
 	}
 
-	public Vector3d getGround(IBlockReader blockaccess, BlockPos pos, Direction dir) {
+	public Vector3d getExactPathingTarget(IBlockReader blockaccess, BlockPos pos, Direction dir) {
 		BlockPos offsetPos = pos.offset(dir);
 
 		VoxelShape shape = blockaccess.getBlockState(offsetPos).getCollisionShape(blockaccess, offsetPos);
@@ -122,9 +122,10 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 		double marginY = 1 - (this.entity.getHeight() % 1);
 
 		double pathingOffsetXZ = (int)(this.entity.getWidth() + 1.0F) * 0.5D;
+		double pathingOffsetY = (int)(this.entity.getHeight() + 1.0F) * 0.5D - this.entity.getHeight() * 0.5f;
 
 		double x = offsetPos.getX() + pathingOffsetXZ + dir.getXOffset() * (0.1D + marginXZ);
-		double y = offsetPos.getY() + (dir == Direction.DOWN ? -0.1D : 0.0D) + (dir == Direction.UP ? 0.1D + marginY : 0.0D);
+		double y = offsetPos.getY() + pathingOffsetY  + (dir == Direction.DOWN ? -0.1D - pathingOffsetY : 0.0D) + (dir == Direction.UP ? 0.1D + marginY - pathingOffsetY : 0.0D);
 		double z = offsetPos.getZ() + pathingOffsetXZ + dir.getZOffset() * (0.1D + marginXZ);
 
 		switch(axis) {
@@ -154,8 +155,8 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 
 		this.verticalFacing = Direction.getFacingFromVector((float) upVector.x, (float) upVector.y, (float) upVector.z);
 
-		//Look up to 3 nodes ahead so it doesn't backtrack on positions with multiple path sides when changing/updating path
-		for(int i = 3; i >= 0; i--) {
+		//Look up to 4 nodes ahead so it doesn't backtrack on positions with multiple path sides when changing/updating path
+		for(int i = 4; i >= 0; i--) {
 			if(this.currentPath.getCurrentPathIndex() + i < this.currentPath.getCurrentPathLength()) {
 				PathPoint currentTarget = this.currentPath.getPathPointFromIndex(this.currentPath.getCurrentPathIndex() + i);
 

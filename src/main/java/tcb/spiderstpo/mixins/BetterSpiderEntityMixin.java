@@ -1,5 +1,6 @@
 package tcb.spiderstpo.mixins;
 
+import java.util.UUID;
 import java.util.function.Predicate;
 
 import org.spongepowered.asm.mixin.Mixin;
@@ -11,9 +12,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.MobEntity;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.Attributes;
 import net.minecraft.entity.ai.goal.Goal;
 import net.minecraft.entity.ai.goal.GoalSelector;
 import net.minecraft.entity.ai.goal.LeapAtTargetGoal;
+import net.minecraft.entity.ai.goal.TargetGoal;
 import net.minecraft.entity.monster.MonsterEntity;
 import net.minecraft.entity.monster.SpiderEntity;
 import net.minecraft.pathfinding.PathNodeType;
@@ -24,15 +28,25 @@ import net.minecraft.world.IBlockReader;
 import net.minecraft.world.World;
 import tcb.spiderstpo.common.Config;
 import tcb.spiderstpo.common.ModTags;
+import tcb.spiderstpo.common.entity.goal.BetterLeapAtTargetGoal;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.IMobEntityRegisterGoalsHook;
 
 @Mixin(value = SpiderEntity.class, priority = 1001)
 public abstract class BetterSpiderEntityMixin extends MonsterEntity implements IClimberEntity, IMobEntityRegisterGoalsHook {
+
+	private static final UUID FOLLOW_RANGE_INCREASE_ID = UUID.fromString("9e815957-3a8e-4b65-afbc-eba39d2a06b4");
+	private static final AttributeModifier FOLLOW_RANGE_INCREASE = new AttributeModifier(FOLLOW_RANGE_INCREASE_ID, "Spiders 2.0 follow range increase", 8.0D, AttributeModifier.Operation.ADDITION);
+
 	private boolean pathFinderDebugPreview;
 
 	private BetterSpiderEntityMixin(EntityType<? extends MonsterEntity> type, World worldIn) {
 		super(type, worldIn);
+	}
+
+	@Inject(method = "<init>*", at = @At("RETURN"))
+	private void onConstructed(CallbackInfo ci) {
+		this.getAttribute(Attributes.field_233819_b_).func_233769_c_(FOLLOW_RANGE_INCREASE);
 	}
 
 	@Inject(method = "registerData()V", at = @At("HEAD"))
@@ -45,20 +59,14 @@ public abstract class BetterSpiderEntityMixin extends MonsterEntity implements I
 			target = "Lnet/minecraft/entity/ai/goal/GoalSelector;addGoal(ILnet/minecraft/entity/ai/goal/Goal;)V"
 			))
 	private void onAddGoal(GoalSelector selector, int priority, Goal task) {
-		if(task.getClass() == LeapAtTargetGoal.class) {
-			/*selector.addGoal(priority, new LeapAtTargetGoal(this, 0.4f) {
-				@Override
-				public boolean shouldExecute() {
-					// TODO Do some more strict checking so that it only leaps if it doesn't interrupt the path
-					return super.shouldExecute();
-				}
-			});*/
+		if(task instanceof LeapAtTargetGoal) {
+			selector.addGoal(3, new BetterLeapAtTargetGoal<>(this, 0.4f));
+		} else if(task instanceof TargetGoal) {
+			selector.addGoal(2, ((TargetGoal) task).setUnseenMemoryTicks(200));
 		} else {
 			selector.addGoal(priority, task);
 		}
 	}
-	
-	//TODO Increase follow range again
 
 	@Override
 	public boolean shouldTrackPathingTargets() {

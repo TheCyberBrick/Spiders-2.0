@@ -8,10 +8,12 @@ import net.minecraft.world.World;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 
 public class BetterSpiderPathNavigator<T extends MobEntity & IClimberEntity> extends AdvancedClimberPathNavigator<T> {
+	private boolean useVanillaBehaviour;
 	private BlockPos targetPosition;
 
-	public BetterSpiderPathNavigator(T entity, World worldIn) {
+	public BetterSpiderPathNavigator(T entity, World worldIn, boolean useVanillaBehaviour) {
 		super(entity, worldIn, false, true, true);
+		this.useVanillaBehaviour = useVanillaBehaviour;
 	}
 
 	@Override
@@ -43,7 +45,7 @@ public class BetterSpiderPathNavigator<T extends MobEntity & IClimberEntity> ext
 		if(!this.noPath()) {
 			super.tick();
 		} else {
-			if(this.targetPosition != null) {
+			if(this.targetPosition != null && this.useVanillaBehaviour) {
 				// FORGE: Fix MC-94054
 				if(!this.targetPosition.withinDistance(this.entity.getPositionVec(), Math.max((double) this.entity.getWidth(), 1.0D)) && (!(this.entity.getPosY() > (double) this.targetPosition.getY()) || !(new BlockPos((double) this.targetPosition.getX(), this.entity.getPosY(), (double) this.targetPosition.getZ())).withinDistance(this.entity.getPositionVec(), Math.max((double) this.entity.getWidth(), 1.0D)))) {
 					this.entity.getMoveHelper().setMoveTo((double) this.targetPosition.getX(), (double) this.targetPosition.getY(), (double) this.targetPosition.getZ(), this.speed);
