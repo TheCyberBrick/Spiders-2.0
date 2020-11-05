@@ -136,12 +136,13 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 					dir = Direction.DOWN;
 				}
 
-				Vec3d targetPos = this.getExactPathingTarget(this.world, targetPoint.func_224759_a(), dir);
+				BlockPos targetBlock = new BlockPos(targetPoint.x, targetPoint.y, targetPoint.z);
+				Vec3d targetPos = this.getExactPathingTarget(this.world, targetBlock, dir);
 
 				MovementController moveController = this.entity.getMoveHelper();
 
 				if(moveController instanceof ClimberMoveController && targetPoint instanceof DirectionalPathPoint && ((DirectionalPathPoint) targetPoint).getPathSide() != null) {
-					((ClimberMoveController) moveController).setMoveTo(targetPos.x, targetPos.y, targetPos.z, targetPoint.func_224759_a().offset(dir), ((DirectionalPathPoint) targetPoint).getPathSide(), this.speed);
+					((ClimberMoveController) moveController).setMoveTo(targetPos.x, targetPos.y, targetPos.z, targetBlock.offset(dir), ((DirectionalPathPoint) targetPoint).getPathSide(), this.speed);
 				} else {
 					moveController.setMoveTo(targetPos.x, targetPos.y, targetPos.z, this.speed);
 				}
