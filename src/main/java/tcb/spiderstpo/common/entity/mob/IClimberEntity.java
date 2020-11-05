@@ -33,7 +33,10 @@ public interface IClimberEntity extends IAdvancedPathFindingEntity {
 	public boolean shouldTrackPathingTargets();
 	
 	@Nullable
-	public List<BlockPos> getTrackedPathingTargets();
+	public Vector3d getTrackedMovementTarget();
+	
+	@Nullable
+	public List<PathingTarget> getTrackedPathingTargets();
 
 	public boolean canClimbOnBlock(BlockState state, BlockPos pos);
 
@@ -56,4 +59,6 @@ public interface IClimberEntity extends IAdvancedPathFindingEntity {
 	public float getCollisionsSmoothingRange();
 
 	public void setCollisionsSmoothingRange(float range);
+	
+	public void setJumpDirection(@Nullable Vector3d dir);
 }
