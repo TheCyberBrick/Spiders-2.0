@@ -172,7 +172,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		BlockPos startPos = initialStartPos;
 
 		long packed = this.removeNonStartingSides(this.getDirectionalPathNodeTypeCached(this.entity, startPos.getX(), startPos.getY(), startPos.getZ()));
-		DirectionalPathPoint startPathPoint = this.openPoint(startPos.getX(), startPos.getY(), startPos.getZ(), packed);
+		DirectionalPathPoint startPathPoint = this.openPoint(startPos.getX(), startPos.getY(), startPos.getZ(), packed, false);
 		startPathPoint.nodeType = unpackNodeType(packed);
 		startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
 
@@ -180,7 +180,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 
 		if(!initialStartPos.equals(startPos)) {
 			packed = this.removeNonStartingSides(this.getDirectionalPathNodeTypeCached(this.entity, startPos.getX(), startPos.getY(), startPos.getZ()));
-			startPathPoint = this.openPoint(startPos.getX(), startPos.getY(), startPos.getZ(), packed);
+			startPathPoint = this.openPoint(startPos.getX(), startPos.getY(), startPos.getZ(), packed, false);
 			startPathPoint.nodeType = unpackNodeType(packed);
 			startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
 		}
@@ -190,7 +190,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 
 			if(this.isSafeStartingPosition(checkPos.setPos(aabb.minX, by, aabb.minZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.minX, by, aabb.maxZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.maxX, by, aabb.minZ)) || this.isSafeStartingPosition(checkPos.setPos(aabb.maxX, by, aabb.maxZ))) {
 				packed = this.removeNonStartingSides(this.getDirectionalPathNodeTypeCached(this.entity, checkPos.getX(), checkPos.getY(), checkPos.getZ()));
-				startPathPoint = this.openPoint(checkPos.getX(), checkPos.getY(), checkPos.getZ(), packed);
+				startPathPoint = this.openPoint(checkPos.getX(), checkPos.getY(), checkPos.getZ(), packed, false);
 				startPathPoint.nodeType = unpackNodeType(packed);
 				startPathPoint.costMalus = this.entity.getPathPriority(startPathPoint.nodeType);
 			}
@@ -629,11 +629,11 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 		return false;
 	}
 
-	protected DirectionalPathPoint openPoint(int x, int y, int z, long packed) {
+	protected DirectionalPathPoint openPoint(int x, int y, int z, long packed, boolean isDrop) {
 		int hash = PathPoint.makeHash(x, y, z);
 
 		PathPoint point = this.pointMap.computeIfAbsent(hash, (key) -> {
-			return new DirectionalPathPoint(x, y, z, packed);
+			return new DirectionalPathPoint(x, y, z, packed, isDrop);
 		});
 
 		if(point instanceof DirectionalPathPoint == false) {
@@ -666,7 +666,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 			DirectionalPathPoint[] result = new DirectionalPathPoint[1];
 
 			if(malus >= 0.0F && (allowBlocked || nodeType != PathNodeType.BLOCKED)) {
-				directPathPoint = this.openPoint(x, y, z, packed);
+				directPathPoint = this.openPoint(x, y, z, packed, false);
 				directPathPoint.nodeType = nodeType;
 				directPathPoint.costMalus = Math.max(directPathPoint.costMalus, malus);
 
@@ -721,7 +721,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 							PathNodeType nodeTypeAtFacing = unpackNodeType(packedAtFacing);
 
 							if(nodeTypeAtFacing == PathNodeType.BLOCKED) {
-								directPathPoint = this.openPoint(x, y, z, packedAtFacing);
+								directPathPoint = this.openPoint(x, y, z, packedAtFacing, false);
 								directPathPoint.nodeType = PathNodeType.WALKABLE;
 								directPathPoint.costMalus = Math.max(directPathPoint.costMalus, malus);
 								result[0] = directPathPoint;
@@ -751,7 +751,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 						malus = this.entity.getPathPriority(nodeType);
 
 						if(((this.entity.getMaxFallHeight() > 0 && nodeType != PathNodeType.OPEN) || nodeType == PathNodeType.WATER || nodeType == PathNodeType.LAVA) && malus >= 0.0F) {
-							fallPathPoint = this.openPoint(x, y, z, packed);
+							fallPathPoint = this.openPoint(x, y, z, packed, true);
 							fallPathPoint.nodeType = nodeType;
 							fallPathPoint.costMalus = Math.max(fallPathPoint.costMalus, malus);
 							break;
@@ -776,7 +776,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 								result[1] = fallPathPoint;
 							}
 
-							result[0] = directPathPoint = this.openPoint(x, preFallY, z, packed);
+							result[0] = directPathPoint = this.openPoint(x, preFallY, z, packed, false);
 							directPathPoint.nodeType = nodeType;
 							directPathPoint.costMalus = Math.max(directPathPoint.costMalus, malus);
 							hasPathUp = true;
@@ -800,7 +800,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 							result = new DirectionalPathPoint[2];
 							result[0] = directPathPoint;
 
-							DirectionalPathPoint bridgePathPoint = this.openPoint(x, preFallY, z, packed);
+							DirectionalPathPoint bridgePathPoint = this.openPoint(x, preFallY, z, packed, false);
 							bridgePathPoint.nodeType = PathNodeType.WALKABLE;
 							bridgePathPoint.costMalus = Math.max(bridgePathPoint.costMalus, bridingMalus);
 							result[1] = bridgePathPoint;
@@ -817,7 +817,7 @@ public class AdvancedWalkNodeProcessor extends WalkNodeProcessor {
 				}
 
 				if(nodeType == PathNodeType.FENCE) {
-					directPathPoint = this.openPoint(x, y, z, packed);
+					directPathPoint = this.openPoint(x, y, z, packed, false);
 					directPathPoint.visited = true;
 					directPathPoint.nodeType = nodeType;
 					directPathPoint.costMalus = nodeType.getPriority();
