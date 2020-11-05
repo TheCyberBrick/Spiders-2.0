@@ -15,7 +15,9 @@ public class DirectionalPathPoint extends PathPoint {
 	private final Direction[] pathableSides;
 	private final Direction pathSide;
 
-	public DirectionalPathPoint(int x, int y, int z, long packed) {
+	private final boolean isDrop;
+	
+	public DirectionalPathPoint(int x, int y, int z, long packed, boolean isDrop) {
 		super(x, y, z);
 
 		EnumSet<Direction> directionsSet = EnumSet.noneOf(Direction.class);
@@ -29,10 +31,12 @@ public class DirectionalPathPoint extends PathPoint {
 
 		this.pathableSides = directionsSet.toArray(new Direction[0]);
 		this.pathSide = null;
+		
+		this.isDrop = isDrop;
 	}
 
-	public DirectionalPathPoint(PathPoint point, long packed) {
-		this(point.x, point.y, point.z, packed);
+	public DirectionalPathPoint(PathPoint point, long packed, boolean isDrop) {
+		this(point.x, point.y, point.z, packed, isDrop);
 
 		this.index = point.index;
 		this.totalPathDistance = point.totalPathDistance;
@@ -46,16 +50,18 @@ public class DirectionalPathPoint extends PathPoint {
 	}
 
 	public DirectionalPathPoint(PathPoint point) {
-		this(point, ALL_DIRECTIONS);
+		this(point, ALL_DIRECTIONS, false);
 	}
 
-	private DirectionalPathPoint(int x, int y, int z, Direction[] pathableSides, Direction pathSide) {
+	private DirectionalPathPoint(int x, int y, int z, Direction[] pathableSides, Direction pathSide, boolean isDrop) {
 		super(x, y, z);
 
 		this.pathableSides = new Direction[pathableSides.length];
 		System.arraycopy(pathableSides, 0, this.pathableSides, 0, pathableSides.length);
 
 		this.pathSide = pathSide;
+		
+		this.isDrop = isDrop;
 	}
 
 	public DirectionalPathPoint(PathPoint point, Direction pathSide) {
@@ -76,8 +82,12 @@ public class DirectionalPathPoint extends PathPoint {
 
 			this.pathableSides = new Direction[other.pathableSides.length];
 			System.arraycopy(other.pathableSides, 0, this.pathableSides, 0, other.pathableSides.length);
+			
+			this.isDrop = other.isDrop;
 		} else {
 			this.pathableSides = Direction.values();
+		
+			this.isDrop = false;
 		}
 
 		this.pathSide = pathSide;
@@ -89,7 +99,7 @@ public class DirectionalPathPoint extends PathPoint {
 
 	@Override
 	public PathPoint cloneMove(int x, int y, int z) {
-		PathPoint pathPoint = new DirectionalPathPoint(x, y, z, this.pathableSides, this.pathSide);
+		PathPoint pathPoint = new DirectionalPathPoint(x, y, z, this.pathableSides, this.pathSide, this.isDrop);
 		pathPoint.index = this.index;
 		pathPoint.totalPathDistance = this.totalPathDistance;
 		pathPoint.distanceToNext = this.distanceToNext;
@@ -117,5 +127,13 @@ public class DirectionalPathPoint extends PathPoint {
 	@Nullable
 	public Direction getPathSide() {
 		return this.pathSide;
+	}
+	
+	/**
+	 * Returns whether this node represents a drop
+	 * @return
+	 */
+	public boolean isDrop() {
+		return this.isDrop;
 	}
 }

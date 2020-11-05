@@ -9,13 +9,19 @@ import net.minecraft.pathfinding.NodeProcessor;
 import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.util.Direction;
+import net.minecraft.util.math.AxisAlignedBB;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.util.math.vector.Vector3d;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.Orientation;
 
 public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends MovementController {
 	protected final IClimberEntity climber;
+
+	@Nullable
+	protected BlockPos block;
 
 	@Nullable
 	protected Direction side;
@@ -27,11 +33,12 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 
 	@Override
 	public void setMoveTo(double x, double y, double z, double speedIn) {
-		this.setMoveTo(x, y, z, null, speedIn);
+		this.setMoveTo(x, y, z, null, null, speedIn);
 	}
 
-	public void setMoveTo(double x, double y, double z, Direction side, double speedIn) {
+	public void setMoveTo(double x, double y, double z, BlockPos block, Direction side, double speedIn) {
 		super.setMoveTo(x, y, z, speedIn);
+		this.block = block;
 		this.side = side;
 	}
 
@@ -72,6 +79,110 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 			double dx = this.posX - this.mob.getPosX();
 			double dy = this.posY - this.mob.getPosY();
 			double dz = this.posZ - this.mob.getPosZ();
+
+			if(this.side != null && this.block != null) {
+				VoxelShape shape = this.mob.world.getBlockState(this.block).getCollisionShape(this.mob.world, this.block);
+
+				AxisAlignedBB aabb = this.mob.getBoundingBox();
+
+				double ox = 0;
+				double oy = 0;
+				double oz = 0;
+
+				//Use offset towards pathing side if mob is above that pathing side
+				switch(this.side) {
+				case DOWN:
+					if(aabb.minY >= this.block.getY() + shape.getEnd(Direction.Axis.Y) - 0.01D) {
+						ox -= 0.1D;
+					}
+					break;
+				case UP:
+					if(aabb.maxY <= this.block.getY() + shape.getStart(Direction.Axis.Y) + 0.01D) {
+						oy += 0.1D;
+					}
+					break;
+				case WEST:
+					if(aabb.minX >= this.block.getX() + shape.getEnd(Direction.Axis.X) - 0.01D) {
+						ox -= 0.1D;
+					}
+					break;
+				case EAST:
+					if(aabb.maxX <= this.block.getX() + shape.getStart(Direction.Axis.X) + 0.01D) {
+						ox += 0.1D;
+					}
+					break;
+				case NORTH:
+					if(aabb.minZ >= this.block.getZ() + shape.getEnd(Direction.Axis.Z) - 0.01D) {
+						oz -= 0.1D;
+					}
+					break;
+				case SOUTH:
+					if(aabb.maxZ <= this.block.getZ() + shape.getStart(Direction.Axis.Z) + 0.01D) {
+						oz += 0.1D;
+					}
+					break;
+				}
+
+				AxisAlignedBB blockAabb = new AxisAlignedBB(this.block.offset(this.side.getOpposite()));
+
+				//If mob is on the pathing side block then only apply the offsets if the block is above the according side of the voxel shape
+				if(aabb.intersects(blockAabb)) {
+					Direction.Axis offsetAxis = this.side.getAxis();
+					double offset;
+
+					switch(offsetAxis) {
+					default:
+					case X:
+						offset = this.side.getXOffset() * 0.5f;
+						break;
+					case Y:
+						offset = this.side.getYOffset() * 0.5f;
+						break;
+					case Z:
+						offset = this.side.getZOffset() * 0.5f;
+						break;
+					}
+
+					double allowedOffset = shape.getAllowedOffset(offsetAxis, aabb.offset(-this.block.getX(), -this.block.getY(), -this.block.getZ()), offset);
+
+					switch(this.side) {
+					case DOWN:
+						if(aabb.minY + allowedOffset < this.block.getY() + shape.getEnd(Direction.Axis.Y) - 0.01D) {
+							oy = 0;
+						}
+						break;
+					case UP:
+						if(aabb.maxY + allowedOffset > this.block.getY() + shape.getStart(Direction.Axis.Y) + 0.01D) {
+							oy = 0;
+						}
+						break;
+					case WEST:
+						if(aabb.minX + allowedOffset < this.block.getX() + shape.getEnd(Direction.Axis.X) - 0.01D) {
+							ox = 0;
+						}
+						break;
+					case EAST:
+						if(aabb.maxX + allowedOffset > this.block.getX() + shape.getStart(Direction.Axis.X) + 0.01D) {
+							ox = 0;
+						}
+						break;
+					case NORTH:
+						if(aabb.minZ + allowedOffset < this.block.getZ() + shape.getEnd(Direction.Axis.Z) - 0.01D) {
+							oz = 0;
+						}
+						break;
+					case SOUTH:
+						if(aabb.maxZ + allowedOffset > this.block.getZ() + shape.getStart(Direction.Axis.Z) + 0.01D) {
+							oz = 0;
+						}
+						break;
+					}
+				}
+
+				dx += ox;
+				dy += oy;
+				dz += oz;
+			}
 
 			Direction mainOffsetDir = Direction.getFacingFromVector(dx, dy, dz);
 

@@ -100,7 +100,7 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 				MovementController moveController = this.entity.getMoveHelper();
 
 				if(moveController instanceof ClimberMoveController && targetPoint instanceof DirectionalPathPoint && ((DirectionalPathPoint) targetPoint).getPathSide() != null) {
-					((ClimberMoveController) moveController).setMoveTo(targetPos.x, targetPos.y, targetPos.z, ((DirectionalPathPoint) targetPoint).getPathSide(), this.speed);
+					((ClimberMoveController) moveController).setMoveTo(targetPos.x, targetPos.y, targetPos.z, targetPoint.func_224759_a().offset(dir), ((DirectionalPathPoint) targetPoint).getPathSide(), this.speed);
 				} else {
 					moveController.setMoveTo(targetPos.x, targetPos.y, targetPos.z, this.speed);
 				}
@@ -124,9 +124,9 @@ public class AdvancedClimberPathNavigator<T extends MobEntity & IClimberEntity> 
 		double pathingOffsetXZ = (int)(this.entity.getWidth() + 1.0F) * 0.5D;
 		double pathingOffsetY = (int)(this.entity.getHeight() + 1.0F) * 0.5D - this.entity.getHeight() * 0.5f;
 
-		double x = offsetPos.getX() + pathingOffsetXZ + dir.getXOffset() * (0.1D + marginXZ);
-		double y = offsetPos.getY() + pathingOffsetY  + (dir == Direction.DOWN ? -0.1D - pathingOffsetY : 0.0D) + (dir == Direction.UP ? 0.1D + marginY - pathingOffsetY : 0.0D);
-		double z = offsetPos.getZ() + pathingOffsetXZ + dir.getZOffset() * (0.1D + marginXZ);
+		double x = offsetPos.getX() + pathingOffsetXZ + dir.getXOffset() * marginXZ;
+		double y = offsetPos.getY() + pathingOffsetY  + (dir == Direction.DOWN ? -pathingOffsetY : 0.0D) + (dir == Direction.UP ? -pathingOffsetY + marginY : 0.0D);
+		double z = offsetPos.getZ() + pathingOffsetXZ + dir.getZOffset() * marginXZ;
 
 		switch(axis) {
 		default:
