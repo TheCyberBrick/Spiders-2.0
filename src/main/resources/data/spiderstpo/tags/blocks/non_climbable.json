@@ -16,6 +16,9 @@
     "minecraft:brown_glazed_terracotta",
     "minecraft:green_glazed_terracotta",
     "minecraft:red_glazed_terracotta",
-    "minecraft:black_glazed_terracotta"
+    "minecraft:black_glazed_terracotta",
+    "minecraft:ice",
+    "minecraft:packed_ice",
+    "minecraft:blue_ice"
   ]
 }

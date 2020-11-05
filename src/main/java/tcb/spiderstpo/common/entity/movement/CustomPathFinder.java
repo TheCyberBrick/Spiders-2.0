@@ -172,7 +172,7 @@ public class CustomPathFinder extends PathFinder {
 		return minDst;
 	}
 
-	private Path createPath(PathPoint start, BlockPos target, boolean isTargetReached) {
+	protected Path createPath(PathPoint start, BlockPos target, boolean isTargetReached) {
 		List<PathPoint> points = Lists.newArrayList();
 
 		PathPoint currentPathPoint = start;

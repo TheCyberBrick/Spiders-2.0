@@ -36,6 +36,7 @@ import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.monster.SpiderEntity;
 import net.minecraft.fluid.IFluidState;
+import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.datasync.DataParameter;
 import net.minecraft.network.datasync.DataSerializers;
 import net.minecraft.network.datasync.EntityDataManager;
@@ -65,26 +66,35 @@ import tcb.spiderstpo.common.CollisionSmoothingUtil;
 import tcb.spiderstpo.common.Matrix4f;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.IEntityMovementHook;
+import tcb.spiderstpo.common.entity.mob.IEntityReadWriteHook;
+import tcb.spiderstpo.common.entity.mob.IEntityRegisterDataHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityDataManagerHook;
+import tcb.spiderstpo.common.entity.mob.ILivingEntityJumpHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityLookAtHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityRotationHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityTravelHook;
 import tcb.spiderstpo.common.entity.mob.IMobEntityLivingTickHook;
 import tcb.spiderstpo.common.entity.mob.IMobEntityTickHook;
 import tcb.spiderstpo.common.entity.mob.Orientation;
-import tcb.spiderstpo.common.entity.movement.AdvancedClimberPathNavigator;
-import tcb.spiderstpo.common.entity.movement.AdvancedGroundPathNavigator;
+import tcb.spiderstpo.common.entity.mob.PathingTarget;
+import tcb.spiderstpo.common.entity.movement.BetterSpiderPathNavigator;
+import tcb.spiderstpo.common.entity.movement.ClimberJumpController;
 import tcb.spiderstpo.common.entity.movement.ClimberLookController;
 import tcb.spiderstpo.common.entity.movement.ClimberMoveController;
+import tcb.spiderstpo.common.entity.movement.DirectionalPathPoint;
 
 @Mixin(value = { SpiderEntity.class })
-public abstract class ClimberEntityMixin extends CreatureEntity implements IClimberEntity, IMobEntityLivingTickHook, ILivingEntityLookAtHook, IMobEntityTickHook, ILivingEntityRotationHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook, IEntityMovementHook {
+public abstract class ClimberEntityMixin extends CreatureEntity implements IClimberEntity, IMobEntityLivingTickHook, ILivingEntityLookAtHook, IMobEntityTickHook, ILivingEntityRotationHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook, IEntityMovementHook, IEntityReadWriteHook, IEntityRegisterDataHook, ILivingEntityJumpHook {
 
 	//Copy from LivingEntity
 	private static final UUID SLOW_FALLING_ID = UUID.fromString("A5B6CF2A-2F7C-31EF-9022-7C3E7D5E6ABA");
 	private static final AttributeModifier SLOW_FALLING = new AttributeModifier(SLOW_FALLING_ID, "Slow falling acceleration reduction", -0.07, AttributeModifier.Operation.ADDITION);
 
+	private static final DataParameter<Float> MOVEMENT_TARGET_X;
+	private static final DataParameter<Float> MOVEMENT_TARGET_Y;
+	private static final DataParameter<Float> MOVEMENT_TARGET_Z;
 	private static final ImmutableList<DataParameter<Optional<BlockPos>>> PATHING_TARGETS;
+	private static final ImmutableList<DataParameter<Direction>> PATHING_SIDES;
 
 	private static final DataParameter<Rotations> ROTATION_BODY;
 	private static final DataParameter<Rotations> ROTATION_HEAD;
@@ -93,11 +103,18 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		@SuppressWarnings("unchecked")
 		Class<Entity> cls = (Class<Entity>) MethodHandles.lookup().lookupClass();
 
+		MOVEMENT_TARGET_X = EntityDataManager.createKey(cls, DataSerializers.FLOAT);
+		MOVEMENT_TARGET_Y = EntityDataManager.createKey(cls, DataSerializers.FLOAT);
+		MOVEMENT_TARGET_Z = EntityDataManager.createKey(cls, DataSerializers.FLOAT);
+
 		ImmutableList.Builder<DataParameter<Optional<BlockPos>>> pathingTargets = ImmutableList.builder();
+		ImmutableList.Builder<DataParameter<Direction>> pathingSides = ImmutableList.builder();
 		for(int i = 0; i < 8; i++) {
 			pathingTargets.add(EntityDataManager.createKey(cls, DataSerializers.OPTIONAL_BLOCK_POS));
+			pathingSides.add(EntityDataManager.createKey(cls, DataSerializers.DIRECTION));
 		}
 		PATHING_TARGETS = pathingTargets.build();
+		PATHING_SIDES = pathingSides.build();
 
 		ROTATION_BODY = EntityDataManager.createKey(cls, DataSerializers.ROTATIONS);
 		ROTATION_HEAD = EntityDataManager.createKey(cls, DataSerializers.ROTATIONS);
@@ -138,6 +155,8 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 	private double preMoveY;
 
+	private Vec3d jumpDir;
+
 	private ClimberEntityMixin(EntityType<? extends CreatureEntity> type, World worldIn) {
 		super(type, worldIn);
 	}
@@ -149,13 +168,29 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		this.groundDirecton = this.getGroundDirection();
 		this.moveController = new ClimberMoveController<>(this);
 		this.lookController = new ClimberLookController<>(this);
+		this.jumpController = new ClimberJumpController<>(this);
 	}
 
-	@Inject(method = "registerData()V", at = @At("RETURN"))
-	private void onRegisterData(CallbackInfo ci) {
+	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true)
+	private void onCreateNavigator(World world, CallbackInfoReturnable<PathNavigator> ci) {
+		BetterSpiderPathNavigator<ClimberEntityMixin> navigate = new BetterSpiderPathNavigator<ClimberEntityMixin>(this, world, false);
+		navigate.setCanSwim(true);
+		ci.setReturnValue(navigate);
+	}
+
+	@Override
+	public void onRegisterData() {
 		if(this.shouldTrackPathingTargets()) {
+			this.dataManager.register(MOVEMENT_TARGET_X, 0.0f);
+			this.dataManager.register(MOVEMENT_TARGET_Y, 0.0f);
+			this.dataManager.register(MOVEMENT_TARGET_Z, 0.0f);
+
 			for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 				this.dataManager.register(pathingTarget, Optional.empty());
+			}
+
+			for(DataParameter<Direction> pathingSide : PATHING_SIDES) {
+				this.dataManager.register(pathingSide, Direction.DOWN);
 			}
 		}
 
@@ -164,11 +199,26 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		this.dataManager.register(ROTATION_HEAD, new Rotations(0, 0, 0));
 	}
 
-	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true)
-	private void onCreateNavigator(World world, CallbackInfoReturnable<PathNavigator> ci) {
-		AdvancedGroundPathNavigator<ClimberEntityMixin> navigate = new AdvancedClimberPathNavigator<ClimberEntityMixin>(this, world, false, true, true);
-		navigate.setCanSwim(true);
-		ci.setReturnValue(navigate);
+	@Override
+	public void onWrite(CompoundNBT nbt) {
+		nbt.putDouble("SpidersTPO.AttachmentNormalX", this.attachmentNormal.x);
+		nbt.putDouble("SpidersTPO.AttachmentNormalY", this.attachmentNormal.y);
+		nbt.putDouble("SpidersTPO.AttachmentNormalZ", this.attachmentNormal.z);
+
+		nbt.putInt("SpidersTPO.AttachedTicks", this.attachedTicks);
+	}
+
+	@Override
+	public void onRead(CompoundNBT nbt) {
+		this.prevAttachmentNormal = this.attachmentNormal = new Vec3d(
+				nbt.getDouble("SpidersTPO.AttachmentNormalX"),
+				nbt.getDouble("SpidersTPO.AttachmentNormalY"),
+				nbt.getDouble("SpidersTPO.AttachmentNormalZ")
+				);
+
+		this.attachedTicks = nbt.getInt("SpidersTPO.AttachedTicks");
+
+		this.orientation = this.calculateOrientation(1);
 	}
 
 	@Override
@@ -414,21 +464,57 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 				this.dataManager.set(ROTATION_HEAD, new Rotations((float) look.x, (float) look.y, (float) look.z));
 
 				if(this.shouldTrackPathingTargets()) {
+					if(this.moveStrafing != 0) {
+						Vec3d forwardVector = orientation.getGlobal(this.rotationYaw, 0);
+						Vec3d strafeVector = orientation.getGlobal(this.rotationYaw + 90.0f, 0);
+
+						Vec3d offset = forwardVector.scale(this.moveForward).add(strafeVector.scale(this.moveStrafing)).normalize();
+
+						this.dataManager.set(MOVEMENT_TARGET_X, (float) (this.getPosX() + offset.x));
+						this.dataManager.set(MOVEMENT_TARGET_Y, (float) (this.getPosY() + this.getHeight() * 0.5f + offset.y));
+						this.dataManager.set(MOVEMENT_TARGET_Z, (float) (this.getPosZ() + offset.z));
+					} else {
+						this.dataManager.set(MOVEMENT_TARGET_X, (float) this.getMoveHelper().getX());
+						this.dataManager.set(MOVEMENT_TARGET_Y, (float) this.getMoveHelper().getY());
+						this.dataManager.set(MOVEMENT_TARGET_Z, (float) this.getMoveHelper().getZ());
+					}
+
 					Path path = this.getNavigator().getPath();
 					if(path != null) {
 						int i = 0;
+
 						for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
+							DataParameter<Direction> pathingSide = PATHING_SIDES.get(i);
+
 							if(path.getCurrentPathIndex() + i < path.getCurrentPathLength()) {
 								PathPoint point = path.getPathPointFromIndex(path.getCurrentPathIndex() + i);
+
 								this.dataManager.set(pathingTarget, Optional.of(new BlockPos(point.x, point.y, point.z)));
+
+								if(point instanceof DirectionalPathPoint) {
+									Direction dir = ((DirectionalPathPoint) point).getPathSide();
+
+									if(dir != null) {
+										this.dataManager.set(pathingSide, dir);
+									} else {
+										this.dataManager.set(pathingSide, Direction.DOWN);
+									}
+								}
+
 							} else {
 								this.dataManager.set(pathingTarget, Optional.empty());
+								this.dataManager.set(pathingSide, Direction.DOWN);
 							}
+
 							i++;
 						}
 					} else {
 						for(DataParameter<Optional<BlockPos>> pathingTarget : PATHING_TARGETS) {
 							this.dataManager.set(pathingTarget, Optional.empty());
+						}
+
+						for(DataParameter<Direction> pathingSide : PATHING_SIDES) {
+							this.dataManager.set(pathingSide, Direction.DOWN);
 						}
 					}
 				}
@@ -448,16 +534,29 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 	@Override
 	@Nullable
-	public List<BlockPos> getTrackedPathingTargets() {
+	public Vec3d getTrackedMovementTarget() {
 		if(this.shouldTrackPathingTargets()) {
-			List<BlockPos> pathingTargets = new ArrayList<>(PATHING_TARGETS.size());
+			return new Vec3d(this.dataManager.get(MOVEMENT_TARGET_X), this.dataManager.get(MOVEMENT_TARGET_Y), this.dataManager.get(MOVEMENT_TARGET_Z));
+		}
 
+		return null;
+	}
+
+	@Override
+	@Nullable
+	public List<PathingTarget> getTrackedPathingTargets() {
+		if(this.shouldTrackPathingTargets()) {
+			List<PathingTarget> pathingTargets = new ArrayList<>(PATHING_TARGETS.size());
+
+			int i = 0;
 			for(DataParameter<Optional<BlockPos>> key : PATHING_TARGETS) {
 				BlockPos pos = this.dataManager.get(key).orElse(null);
 
 				if(pos != null) {
-					pathingTargets.add(pos);
+					pathingTargets.add(new PathingTarget(pos, this.dataManager.get(PATHING_SIDES.get(i))));
 				}
+
+				i++;
 			}
 
 			return pathingTargets;
@@ -805,6 +904,40 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 	}
 
 	@Override
+	public void setJumpDirection(Vec3d dir) {
+		this.jumpDir = dir != null ? dir.normalize() : null;
+	}
+
+	@Override
+	public boolean onJump() {
+		if(this.jumpDir != null) {
+			float jumpStrength = this.getJumpUpwardsMotion();
+			if(this.isPotionActive(Effects.JUMP_BOOST)) {
+				jumpStrength += 0.1F * (float)(this.getActivePotionEffect(Effects.JUMP_BOOST).getAmplifier() + 1);
+			}
+			
+			Vec3d motion = this.getMotion();
+
+			Vec3d orthogonalMotion = this.jumpDir.scale(this.jumpDir.dotProduct(motion));
+			Vec3d tangentialMotion = motion.subtract(orthogonalMotion);
+
+			this.setMotion(tangentialMotion.x + this.jumpDir.x * jumpStrength, tangentialMotion.y + this.jumpDir.y * jumpStrength, tangentialMotion.z + this.jumpDir.z * jumpStrength);
+
+			if(this.isSprinting()) {
+				Vec3d boost = this.getOrientation().getGlobal(this.rotationYaw, 0).scale(0.2f);
+				this.setMotion(this.getMotion().add(boost));
+			}
+
+			this.isAirBorne = true;
+			net.minecraftforge.common.ForgeHooks.onLivingJump(this);
+
+			return true;
+		}
+
+		return false;
+	}
+
+	@Override
 	public boolean onTravel(Vec3d relative, boolean pre) {
 		if(pre) {
 			boolean canTravel = this.isServerWorld() || this.canPassengerSteer();
@@ -853,11 +986,16 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		this.limbSwing += this.limbSwingAmount;
 	}
 
+	private float getRelevantMoveFactor(float slipperiness) {
+		return this.onGround ? this.getAIMoveSpeed() * (0.16277136F / (slipperiness * slipperiness * slipperiness)) : this.jumpMovementFactor;
+	}
+
 	private void travelOnGround(Vec3d relative) {
 		Orientation orientation = this.getOrientation();
 
 		Vec3d forwardVector = orientation.getGlobal(this.rotationYaw, 0);
-		Vec3d upVector = orientation.getGlobal(this.rotationYaw, -90);
+		Vec3d strafeVector = orientation.getGlobal(this.rotationYaw + 90.0f, 0);
+		Vec3d upVector = orientation.getGlobal(this.rotationYaw, -90.0f);
 
 		Pair<Direction, Vec3d> groundDirection = this.getGroundDirection();
 
@@ -870,8 +1008,9 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		}
 
 		float forward = (float) relative.z;
+		float strafe = (float) relative.x;
 
-		if(forward != 0) {
+		if(forward != 0 || strafe != 0) {
 			float slipperiness = 0.91f;
 
 			if(this.onGround) {
@@ -879,14 +1018,14 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 				slipperiness = this.getBlockSlipperiness(offsetPos);
 			}
 
-			float friction = forward * 0.16277136F / (slipperiness * slipperiness * slipperiness);
-
-			float f = forward * forward;
+			float f = forward * forward + strafe * strafe;
 			if(f >= 1.0E-4F) {
 				f = Math.max(MathHelper.sqrt(f), 1.0f);
-				f = friction / f;
+				f = this.getRelevantMoveFactor(slipperiness) / f;
+				forward *= f;
+				strafe *= f;
 
-				Vec3d forwardOffset = new Vec3d(forwardVector.x * forward * f, forwardVector.y * forward * f, forwardVector.z * forward * f);
+				Vec3d movementOffset = new Vec3d(forwardVector.x * forward + strafeVector.x * strafe, forwardVector.y * forward + strafeVector.y * strafe, forwardVector.z * forward + strafeVector.z * strafe);
 
 				double px = this.getPosX();
 				double py = this.getPosY();
@@ -895,7 +1034,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 				AxisAlignedBB aabb = this.getBoundingBox();
 
 				//Probe actual movement vector
-				this.move(MoverType.SELF, forwardOffset);
+				this.move(MoverType.SELF, movementOffset);
 
 				Vec3d movementDir = new Vec3d(this.getPosX() - px, this.getPosY() - py, this.getPosZ() - pz).normalize();
 
@@ -926,7 +1065,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 				//Nullify sticking force along movement vector projected to surface
 				stickingForce = stickingForce.subtract(surfaceMovementDir.scale(surfaceMovementDir.normalize().dotProduct(stickingForce)));
 
-				float moveSpeed = forward * f;
+				float moveSpeed = MathHelper.sqrt(forward * forward + strafe * strafe);
 				this.setMotion(this.getMotion().add(movementDir.scale(moveSpeed)));
 			}
 		}

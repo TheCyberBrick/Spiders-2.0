@@ -16,7 +16,7 @@ apply plugin: 'eclipse'
 apply plugin: 'maven-publish'
 apply plugin: 'org.spongepowered.mixin'
 
-version = '1.0.3'
+version = '1.0.4'
 group = 'tcb.spiderstpo'
 archivesBaseName = 'spiders-2.0-1.15.2'
 
