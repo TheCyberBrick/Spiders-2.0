@@ -14,12 +14,14 @@ import net.minecraft.util.Direction;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Matrix4f;
+import net.minecraft.util.math.vector.Vector3d;
 import net.minecraft.util.math.vector.Vector3f;
 import net.minecraftforge.client.event.RenderLivingEvent;
 import net.minecraftforge.eventbus.api.EventPriority;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.Orientation;
+import tcb.spiderstpo.common.entity.mob.PathingTarget;
 
 public class ClientEventHandlers {
 	@SubscribeEvent(priority = EventPriority.LOWEST)
@@ -78,20 +80,44 @@ public class ClientEventHandlers {
 				if(Minecraft.getInstance().getRenderManager().isDebugBoundingBox()) {
 					WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(0, 0, 0, 0, 0, 0).grow(0.2f), 1.0f, 1.0f, 1.0f, 1.0f);
 
-					List<BlockPos> pathingTargets = climber.getTrackedPathingTargets();
+					double rx = entity.prevPosX + (entity.getPosX() - entity.prevPosX) * partialTicks;
+					double ry = entity.prevPosY + (entity.getPosY() - entity.prevPosY) * partialTicks;
+					double rz = entity.prevPosZ + (entity.getPosZ() - entity.prevPosZ) * partialTicks;
+
+					Vector3d movementTarget = climber.getTrackedMovementTarget();
+
+					if(movementTarget != null) {
+						WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(movementTarget.getX() - 0.25f, movementTarget.getY() - 0.25f, movementTarget.getZ() - 0.25f, movementTarget.getX() + 0.25f, movementTarget.getY() + 0.25f, movementTarget.getZ() + 0.25f).offset(-rx - x, -ry - y, -rz - z), 0.0f, 1.0f, 1.0f, 1.0f);
+					}
+
+					List<PathingTarget> pathingTargets = climber.getTrackedPathingTargets();
 
 					if(pathingTargets != null) {
 						int i = 0;
-						for(BlockPos pathingTarget : pathingTargets) {
-							double rx = entity.prevPosX + (entity.getPosX() - entity.prevPosX) * partialTicks;
-							double ry = entity.prevPosY + (entity.getPosY() - entity.prevPosY) * partialTicks;
-							double rz = entity.prevPosZ + (entity.getPosZ() - entity.prevPosZ) * partialTicks;
 
-							if(i == 0) {
-								WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pathingTarget).offset(-rx - x, -ry - y, -rz - z), 1.0f, 0.0f, 0.0f, 1.0f);
-							} else {
-								WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pathingTarget).offset(-rx - x, -ry - y, -rz - z), 1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f);
-							}
+						for(PathingTarget pathingTarget : pathingTargets) {
+							BlockPos pos = pathingTarget.pos;
+
+                            WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(pos).offset(-rx - x, -ry - y, -rz - z), 1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 0.15f);
+							
+							matrixStack.push();
+							matrixStack.translate(pos.getX() + 0.5D - rx - x, pos.getY() + 0.5D - ry - y, pos.getZ() + 0.5D - rz - z);
+
+							matrixStack.rotate(pathingTarget.side.getOpposite().getRotation());
+
+							WorldRenderer.drawBoundingBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AxisAlignedBB(-0.501D, -0.501D, -0.501D, 0.501D, -0.45D, 0.501D), 1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f);
+
+							Matrix4f matrix4f = matrixStack.getLast().getMatrix();
+							IVertexBuilder builder = bufferIn.getBuffer(RenderType.LINES);
+
+							builder.pos(matrix4f, -0.501f, -0.45f, -0.501f).color(1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f).endVertex();
+							builder.pos(matrix4f, 0.501f, -0.45f, 0.501f).color(1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f).endVertex();
+							builder.pos(matrix4f, -0.501f, -0.45f, 0.501f).color(1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f).endVertex();
+							builder.pos(matrix4f, 0.501f, -0.45f, -0.501f).color(1.0f, i / (float) (pathingTargets.size() - 1), 0.0f, 1.0f).endVertex();
+
+							matrixStack.pop();
+
+							i++;
 						}
 					}
 
