@@ -254,6 +254,11 @@ public class BetterSpiderEntity extends AbstractClimberEntity implements IMob {
 	public IEntityLivingData onInitialSpawn(DifficultyInstance difficulty, @Nullable IEntityLivingData data) {
 		data = super.onInitialSpawn(difficulty, data);
 
+		if (this.world.isRemote)
+		{
+			return;
+		}
+
 		if(this.world.rand.nextInt(100) == 0) {
 			EntitySkeleton skeleton = new EntitySkeleton(this.world);
 			skeleton.setLocationAndAngles(this.posX, this.posY, this.posZ, this.rotationYaw, 0.0F);
