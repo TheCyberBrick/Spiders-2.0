@@ -63,7 +63,7 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 			Orientation orientation = this.climber.getOrientation();
 
 			Vector3d forwardVector = orientation.getGlobal(this.mob.rotationYaw, 0);
-			Vector3d strafeVector = orientation.getGlobal(this.mob.rotationYaw + 90.0f, 0);
+			Vector3d strafeVector = orientation.getGlobal(this.mob.rotationYaw - 90.0f, 0);
 
 			if(!this.isWalkableAtOffset(forwardVector.x * forward + strafeVector.x * strafe, forwardVector.y * forward + strafeVector.y * strafe, forwardVector.z * forward + strafeVector.z * strafe)) {
 				this.moveForward = 1.0F;

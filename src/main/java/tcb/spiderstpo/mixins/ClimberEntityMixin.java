@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -40,7 +39,6 @@ import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.pathfinding.PathPoint;
 import net.minecraft.potion.Effects;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.BlockPos;
@@ -50,14 +48,13 @@ import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.util.math.shapes.VoxelShapeSpliterator;
 import net.minecraft.util.math.shapes.VoxelShapes;
 import net.minecraft.util.math.vector.Vector3d;
-import net.minecraft.world.IBlockReader;
 import net.minecraft.world.ICollisionReader;
 import net.minecraft.world.World;
-import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.server.ChunkManager.EntityTracker;
 import net.minecraft.world.server.ServerWorld;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
 import tcb.spiderstpo.common.Matrix4f;
+import tcb.spiderstpo.common.entity.CachedCollisionReader;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.IEntityMovementHook;
 import tcb.spiderstpo.common.entity.mob.IEntityReadWriteHook;
@@ -68,17 +65,18 @@ import tcb.spiderstpo.common.entity.mob.ILivingEntityLookAtHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityRotationHook;
 import tcb.spiderstpo.common.entity.mob.ILivingEntityTravelHook;
 import tcb.spiderstpo.common.entity.mob.IMobEntityLivingTickHook;
+import tcb.spiderstpo.common.entity.mob.IMobEntityNavigatorHook;
 import tcb.spiderstpo.common.entity.mob.IMobEntityTickHook;
 import tcb.spiderstpo.common.entity.mob.Orientation;
 import tcb.spiderstpo.common.entity.mob.PathingTarget;
-import tcb.spiderstpo.common.entity.movement.BetterSpiderPathNavigator;
+import tcb.spiderstpo.common.entity.movement.AdvancedClimberPathNavigator;
 import tcb.spiderstpo.common.entity.movement.ClimberJumpController;
 import tcb.spiderstpo.common.entity.movement.ClimberLookController;
 import tcb.spiderstpo.common.entity.movement.ClimberMoveController;
 import tcb.spiderstpo.common.entity.movement.DirectionalPathPoint;
 
 @Mixin(value = { SpiderEntity.class })
-public abstract class ClimberEntityMixin extends CreatureEntity implements IClimberEntity, IMobEntityLivingTickHook, ILivingEntityLookAtHook, IMobEntityTickHook, ILivingEntityRotationHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook, IEntityMovementHook, IEntityReadWriteHook, IEntityRegisterDataHook, ILivingEntityJumpHook {
+public abstract class ClimberEntityMixin extends CreatureEntity implements IClimberEntity, IMobEntityLivingTickHook, ILivingEntityLookAtHook, IMobEntityTickHook, ILivingEntityRotationHook, ILivingEntityDataManagerHook, ILivingEntityTravelHook, IEntityMovementHook, IEntityReadWriteHook, IEntityRegisterDataHook, ILivingEntityJumpHook, IMobEntityNavigatorHook {
 
 	//Copy from LivingEntity
 	private static final UUID SLOW_FALLING_ID = UUID.fromString("A5B6CF2A-2F7C-31EF-9022-7C3E7D5E6ABA");
@@ -163,13 +161,24 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		this.moveController = new ClimberMoveController<>(this);
 		this.lookController = new ClimberLookController<>(this);
 		this.jumpController = new ClimberJumpController<>(this);
+		this.prevAttachmentOffsetY = this.attachmentOffsetY = this.lastAttachmentOffsetY = this.getVerticalOffset(1);
 	}
 
-	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true)
+	//createNavigator overrides usually don't call super.createNavigator so this ensures that onCreateNavigator
+	//still gets called in such cases
+	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true, require = -1, expect = -1)
 	private void onCreateNavigator(World world, CallbackInfoReturnable<PathNavigator> ci) {
-		BetterSpiderPathNavigator<ClimberEntityMixin> navigate = new BetterSpiderPathNavigator<ClimberEntityMixin>(this, world, false);
+		PathNavigator navigator = this.onCreateNavigator(world);
+		if(navigator != null) {
+			ci.setReturnValue(navigator);
+		}
+	}
+
+	@Override
+	public PathNavigator onCreateNavigator(World world) {
+		AdvancedClimberPathNavigator<ClimberEntityMixin> navigate = new AdvancedClimberPathNavigator<>(this, world, false, true, true);
 		navigate.setCanSwim(true);
-		ci.setReturnValue(navigate);
+		return navigate;
 	}
 
 	@Override
@@ -460,7 +469,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 				if(this.shouldTrackPathingTargets()) {
 					if(this.moveStrafing != 0) {
 						Vector3d forwardVector = orientation.getGlobal(this.rotationYaw, 0);
-						Vector3d strafeVector = orientation.getGlobal(this.rotationYaw + 90.0f, 0);
+						Vector3d strafeVector = orientation.getGlobal(this.rotationYaw - 90.0f, 0);
 
 						Vector3d offset = forwardVector.scale(this.moveForward).add(strafeVector.scale(this.moveStrafing)).normalize();
 
@@ -560,60 +569,17 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 	}
 
 	@Override
+	public boolean shouldTrackPathingTargets() {
+		return true;
+	}
+
+	@Override
 	public float getVerticalOffset(float partialTicks) {
-		return 0.075f;
+		return 0.4f;
 	}
 
 	private void forEachCollisonBox(AxisAlignedBB aabb, VoxelShapes.ILineConsumer action) {
-		int minChunkX = ((MathHelper.floor(aabb.minX - 1.0E-7D) - 1) >> 4);
-		int maxChunkX = ((MathHelper.floor(aabb.maxX + 1.0E-7D) + 1) >> 4);
-		int minChunkZ = ((MathHelper.floor(aabb.minZ - 1.0E-7D) - 1) >> 4);
-		int maxChunkZ = ((MathHelper.floor(aabb.maxZ + 1.0E-7D) + 1) >> 4);
-
-		int width = maxChunkX - minChunkX + 1;
-		int depth = maxChunkZ - minChunkZ + 1;
-
-		IBlockReader[] blockReaderCache = new IBlockReader[width * depth];
-
-		ICollisionReader collisionReader = this.world;
-
-		for(int cx = minChunkX; cx <= maxChunkX; cx++) {
-			for(int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-				blockReaderCache[(cx - minChunkX) + (cz - minChunkZ) * width] = collisionReader.getBlockReader(cx, cz);
-			}
-		}
-
-		ICollisionReader cachedCollisionReader = new ICollisionReader() {
-			@Override
-			public TileEntity getTileEntity(BlockPos pos) {
-				return collisionReader.getTileEntity(pos);
-			}
-
-			@Override
-			public BlockState getBlockState(BlockPos pos) {
-				return collisionReader.getBlockState(pos);
-			}
-
-			@Override
-			public FluidState getFluidState(BlockPos pos) {
-				return collisionReader.getFluidState(pos);
-			}
-
-			@Override
-			public WorldBorder getWorldBorder() {
-				return collisionReader.getWorldBorder();
-			}
-
-			@Override
-			public Stream<VoxelShape> func_230318_c_(Entity entity, AxisAlignedBB aabb, Predicate<Entity> predicate) {
-				return collisionReader.func_230318_c_(entity, aabb, predicate);
-			}
-
-			@Override
-			public IBlockReader getBlockReader(int chunkX, int chunkZ) {
-				return blockReaderCache[(chunkX - minChunkX) + (chunkZ - minChunkZ) * width];
-			}
-		};
+		ICollisionReader cachedCollisionReader = new CachedCollisionReader(this.world, aabb);
 
 		Stream<VoxelShape> shapes = StreamSupport.stream(new VoxelShapeSpliterator(cachedCollisionReader, this, aabb, this::canClimbOnBlock), false);
 
@@ -651,9 +617,21 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 			Vector3d p = this.getPositionVec();
 
 			Vector3d s = p.add(0, this.getHeight() * 0.5f, 0);
+			Vector3d pp = s;
+			Vector3d pn = this.attachmentNormal.scale(-1);
+
+			//Give nudge towards ground direction so that the climber doesn't
+			//get stuck in an incorrect orientation
+			if(this.groundDirecton != null) {
+				double groundDirectionBlend = 0.25D;
+				Vector3d scaledGroundDirection = this.groundDirecton.getValue().scale(groundDirectionBlend);
+				pp = pp.add(scaledGroundDirection.scale(-1));
+				pn = pn.scale(1.0D - groundDirectionBlend).add(scaledGroundDirection);
+			}
+
 			AxisAlignedBB inclusionBox = new AxisAlignedBB(s.x, s.y, s.z, s.x, s.y, s.z).grow(this.collisionsInclusionRange);
 
-			Pair<Vector3d, Vector3d> attachmentPoint = CollisionSmoothingUtil.findClosestPoint(consumer -> this.forEachCollisonBox(inclusionBox, consumer), s, this.attachmentNormal.scale(-1), this.collisionsSmoothingRange, 1.0f, 0.001f, 20, 0.05f, s);
+			Pair<Vector3d, Vector3d> attachmentPoint = CollisionSmoothingUtil.findClosestPoint(consumer -> this.forEachCollisonBox(inclusionBox, consumer), pp, pn, this.collisionsSmoothingRange, 0.5f, 1.0f, 0.001f, 20, 0.05f, s);
 
 			AxisAlignedBB entityBox = this.getBoundingBox();
 
@@ -843,7 +821,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 			if(this.isPotionActive(Effects.JUMP_BOOST)) {
 				jumpStrength += 0.1F * (float)(this.getActivePotionEffect(Effects.JUMP_BOOST).getAmplifier() + 1);
 			}
-			
+
 			Vector3d motion = this.getMotion();
 
 			Vector3d orthogonalMotion = this.jumpDir.scale(this.jumpDir.dotProduct(motion));
@@ -910,7 +888,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		Orientation orientation = this.getOrientation();
 
 		Vector3d forwardVector = orientation.getGlobal(this.rotationYaw, 0);
-		Vector3d strafeVector = orientation.getGlobal(this.rotationYaw + 90.0f, 0);
+		Vector3d strafeVector = orientation.getGlobal(this.rotationYaw - 90.0f, 0);
 		Vector3d upVector = orientation.getGlobal(this.rotationYaw, -90.0f);
 
 		Pair<Direction, Vector3d> groundDirection = this.getGroundDirection();

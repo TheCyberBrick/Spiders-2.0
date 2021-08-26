@@ -20,6 +20,7 @@ import net.minecraft.entity.ai.goal.LeapAtTargetGoal;
 import net.minecraft.entity.ai.goal.TargetGoal;
 import net.minecraft.entity.monster.MonsterEntity;
 import net.minecraft.entity.monster.SpiderEntity;
+import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.pathfinding.PathNodeType;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
@@ -30,10 +31,12 @@ import tcb.spiderstpo.common.Config;
 import tcb.spiderstpo.common.ModTags;
 import tcb.spiderstpo.common.entity.goal.BetterLeapAtTargetGoal;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
+import tcb.spiderstpo.common.entity.mob.IMobEntityNavigatorHook;
 import tcb.spiderstpo.common.entity.mob.IMobEntityRegisterGoalsHook;
+import tcb.spiderstpo.common.entity.movement.BetterSpiderPathNavigator;
 
 @Mixin(value = SpiderEntity.class, priority = 1001)
-public abstract class BetterSpiderEntityMixin extends MonsterEntity implements IClimberEntity, IMobEntityRegisterGoalsHook {
+public abstract class BetterSpiderEntityMixin extends MonsterEntity implements IClimberEntity, IMobEntityRegisterGoalsHook, IMobEntityNavigatorHook {
 
 	private static final UUID FOLLOW_RANGE_INCREASE_ID = UUID.fromString("9e815957-3a8e-4b65-afbc-eba39d2a06b4");
 	private static final AttributeModifier FOLLOW_RANGE_INCREASE = new AttributeModifier(FOLLOW_RANGE_INCREASE_ID, "Spiders 2.0 follow range increase", 8.0D, AttributeModifier.Operation.ADDITION);
@@ -47,6 +50,13 @@ public abstract class BetterSpiderEntityMixin extends MonsterEntity implements I
 	@Inject(method = "<init>*", at = @At("RETURN"))
 	private void onConstructed(CallbackInfo ci) {
 		this.getAttribute(Attributes.field_233819_b_).func_233769_c_(FOLLOW_RANGE_INCREASE);
+	}
+
+	@Override
+	public PathNavigator onCreateNavigator(World world) {
+		BetterSpiderPathNavigator<BetterSpiderEntityMixin> navigate = new BetterSpiderPathNavigator<>(this, world, false);
+		navigate.setCanSwim(true);
+		return navigate;
 	}
 
 	@Inject(method = "registerData()V", at = @At("HEAD"))
