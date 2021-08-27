@@ -243,6 +243,10 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 				if(jumpDir == null && this.side != null && targetDist < 0.1D && groundDir == this.side.getOpposite()) {
 					jumpDir = new Vector3d(this.side.getXOffset(), this.side.getYOffset(), this.side.getZOffset());
 				}
+				
+				if(jumpDir == null && this.side != null && Math.abs(this.climber.getGroundDirection().getRight().y) > 0.5f && (!this.climber.canAttachToSide(this.side) || !this.climber.canAttachToSide(Direction.getFacingFromVector(dx, dy, dz))) && this.posY > this.mob.getPosY() + 0.1f && verticalOffset > this.mob.stepHeight) {
+					jumpDir = new Vector3d(0, 1, 0);
+				}
 
 				if(jumpDir != null) {
 					this.mob.setAIMoveSpeed((float) speed * 0.5f);

@@ -20,8 +20,10 @@ import net.minecraft.entity.ai.goal.LeapAtTargetGoal;
 import net.minecraft.entity.ai.goal.TargetGoal;
 import net.minecraft.entity.monster.MonsterEntity;
 import net.minecraft.entity.monster.SpiderEntity;
+import net.minecraft.pathfinding.Path;
 import net.minecraft.pathfinding.PathNavigator;
 import net.minecraft.pathfinding.PathNodeType;
+import net.minecraft.pathfinding.PathPoint;
 import net.minecraft.util.Direction;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.vector.Vector3i;
@@ -34,6 +36,7 @@ import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.IMobEntityNavigatorHook;
 import tcb.spiderstpo.common.entity.mob.IMobEntityRegisterGoalsHook;
 import tcb.spiderstpo.common.entity.movement.BetterSpiderPathNavigator;
+import tcb.spiderstpo.common.entity.movement.DirectionalPathPoint;
 
 @Mixin(value = SpiderEntity.class, priority = 1001)
 public abstract class BetterSpiderEntityMixin extends MonsterEntity implements IClimberEntity, IMobEntityRegisterGoalsHook, IMobEntityNavigatorHook {
@@ -89,6 +92,14 @@ public abstract class BetterSpiderEntityMixin extends MonsterEntity implements I
 	}
 
 	@Override
+	public boolean canAttachToSide(Direction side) {
+		if(!this.isJumping && Config.PREVENT_CLIMBING_IN_RAIN.get() && side.getAxis() != Direction.Axis.Y && this.world.isRainingAt(new BlockPos(this.getPosX(), this.getPosY() + this.getHeight() * 0.5f,  this.getPosZ()))) {
+			return false;
+		}
+		return true;
+	}
+
+	@Override
 	public float getBlockSlipperiness(BlockPos pos) {
 		BlockState offsetState = this.world.getBlockState(pos);
 
@@ -104,6 +115,10 @@ public abstract class BetterSpiderEntityMixin extends MonsterEntity implements I
 	@Override
 	public float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction, Predicate<Direction> sides) {
 		if(direction.getY() != 0) {
+			if(Config.PREVENT_CLIMBING_IN_RAIN.get() && !sides.test(Direction.UP) && !sides.test(Direction.DOWN) && this.world.isRainingAt(pos)) {
+				return -1.0f;
+			}
+
 			boolean hasClimbableNeigbor = false;
 
 			BlockPos.Mutable offsetPos = new BlockPos.Mutable();

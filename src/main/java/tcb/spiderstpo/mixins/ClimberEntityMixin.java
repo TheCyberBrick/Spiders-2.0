@@ -52,9 +52,9 @@ import net.minecraft.world.ICollisionReader;
 import net.minecraft.world.World;
 import net.minecraft.world.server.ChunkManager.EntityTracker;
 import net.minecraft.world.server.ServerWorld;
+import tcb.spiderstpo.common.CachedCollisionReader;
 import tcb.spiderstpo.common.CollisionSmoothingUtil;
 import tcb.spiderstpo.common.Matrix4f;
-import tcb.spiderstpo.common.entity.CachedCollisionReader;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.IEntityMovementHook;
 import tcb.spiderstpo.common.entity.mob.IEntityReadWriteHook;
@@ -132,7 +132,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 	private boolean canClimbInWater = false;
 	private boolean canClimbInLava = false;
 
-	private boolean isTravelingInFluid = false;
+	private boolean isClimbingDisabled = false;
 
 	private float collisionsInclusionRange = 2.0f;
 	private float collisionsSmoothingRange = 1.25f;
@@ -166,7 +166,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 	//createNavigator overrides usually don't call super.createNavigator so this ensures that onCreateNavigator
 	//still gets called in such cases
-	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true, require = -1, expect = -1)
+	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true, require = 0, expect = 0)
 	private void onCreateNavigator(World world, CallbackInfoReturnable<PathNavigator> ci) {
 		PathNavigator navigator = this.onCreateNavigator(world);
 		if(navigator != null) {
@@ -364,11 +364,11 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		float stickingDistance = this.moveForward != 0 ? 1.5f : 0.1f;
 
 		for(Direction facing : Direction.values()) {
-			if(avoidPathingFacing == facing) {
+			if(avoidPathingFacing == facing || !this.canAttachToSide(facing)) {
 				continue;
 			}
 
-			List<AxisAlignedBB> collisionBoxes = this.getCollisionBoxes(entityBox.grow(0.2f).expand(facing.getXOffset() * stickingDistance, facing.getYOffset() * stickingDistance, facing.getZOffset() * stickingDistance));
+			List<AxisAlignedBB> collisionBoxes = this.getClimbableCollisionBoxes(entityBox.grow(0.2f).expand(facing.getXOffset() * stickingDistance, facing.getYOffset() * stickingDistance, facing.getZOffset() * stickingDistance));
 
 			double closestDst = Double.MAX_VALUE;
 
@@ -404,6 +404,11 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		} else {
 			this.groundDirecton = Pair.of(closestFacing, weighting.normalize().add(0, -0.001f, 0).normalize());
 		}
+	}
+
+	@Override
+	public boolean canAttachToSide(Direction side) {
+		return true;
 	}
 
 	@Override
@@ -578,7 +583,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		return 0.4f;
 	}
 
-	private void forEachCollisonBox(AxisAlignedBB aabb, VoxelShapes.ILineConsumer action) {
+	private void forEachClimbableCollisonBox(AxisAlignedBB aabb, VoxelShapes.ILineConsumer action) {
 		ICollisionReader cachedCollisionReader = new CachedCollisionReader(this.world, aabb);
 
 		Stream<VoxelShape> shapes = StreamSupport.stream(new VoxelShapeSpliterator(cachedCollisionReader, this, aabb, this::canClimbOnBlock), false);
@@ -586,9 +591,9 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		shapes.forEach(shape -> shape.forEachBox(action));
 	}
 
-	private List<AxisAlignedBB> getCollisionBoxes(AxisAlignedBB aabb) {
+	private List<AxisAlignedBB> getClimbableCollisionBoxes(AxisAlignedBB aabb) {
 		List<AxisAlignedBB> boxes = new ArrayList<>();
-		this.forEachCollisonBox(aabb, (minX, minY, minZ, maxX, maxY, maxZ) -> boxes.add(new AxisAlignedBB(minX, minY, minZ, maxX, maxY, maxZ)));
+		this.forEachClimbableCollisonBox(aabb, (minX, minY, minZ, maxX, maxY, maxZ) -> boxes.add(new AxisAlignedBB(minX, minY, minZ, maxX, maxY, maxZ)));
 		return boxes;
 	}
 
@@ -613,7 +618,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		double baseStickingOffsetZ = 0.0f;
 		Vector3d baseOrientationNormal = new Vector3d(0, 1, 0);
 
-		if(!this.isTravelingInFluid && this.onGround && this.getRidingEntity() == null) {
+		if(!this.isClimbingDisabled && this.onGround && this.getRidingEntity() == null) {
 			Vector3d p = this.getPositionVec();
 
 			Vector3d s = p.add(0, this.getHeight() * 0.5f, 0);
@@ -631,7 +636,7 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 
 			AxisAlignedBB inclusionBox = new AxisAlignedBB(s.x, s.y, s.z, s.x, s.y, s.z).grow(this.collisionsInclusionRange);
 
-			Pair<Vector3d, Vector3d> attachmentPoint = CollisionSmoothingUtil.findClosestPoint(consumer -> this.forEachCollisonBox(inclusionBox, consumer), pp, pn, this.collisionsSmoothingRange, 0.5f, 1.0f, 0.001f, 20, 0.05f, s);
+			Pair<Vector3d, Vector3d> attachmentPoint = CollisionSmoothingUtil.findClosestPoint(consumer -> this.forEachClimbableCollisonBox(inclusionBox, consumer), pp, pn, this.collisionsSmoothingRange, 0.5f, 1.0f, 0.001f, 20, 0.05f, s);
 
 			AxisAlignedBB entityBox = this.getBoundingBox();
 
@@ -848,18 +853,18 @@ public abstract class ClimberEntityMixin extends CreatureEntity implements IClim
 		if(pre) {
 			boolean canTravel = this.isServerWorld() || this.canPassengerSteer();
 
-			this.isTravelingInFluid = false;
+			this.isClimbingDisabled = false;
 
 			FluidState fluidState = this.world.getFluidState(this.func_233580_cy_());
 
 			if(!this.canClimbInWater && this.isInWater() && this.func_241208_cS_() && !this.func_230285_a_(fluidState.getFluid())) {
-				this.isTravelingInFluid = true;
+				this.isClimbingDisabled = true;
 
 				if(canTravel) {
 					return false;
 				}
 			} else if(!this.canClimbInLava && this.isInLava() && this.func_241208_cS_() && !this.func_230285_a_(fluidState.getFluid())) {
-				this.isTravelingInFluid = true;
+				this.isClimbingDisabled = true;
 
 				if(canTravel) {
 					return false;

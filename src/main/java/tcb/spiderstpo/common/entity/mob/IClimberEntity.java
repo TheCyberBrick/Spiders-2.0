@@ -40,6 +40,8 @@ public interface IClimberEntity extends IAdvancedPathFindingEntity {
 
 	public boolean canClimbOnBlock(BlockState state, BlockPos pos);
 
+	public boolean canAttachToSide(Direction side);
+	
 	public float getBlockSlipperiness(BlockPos pos);
 
 	public boolean canClimberTriggerWalking();

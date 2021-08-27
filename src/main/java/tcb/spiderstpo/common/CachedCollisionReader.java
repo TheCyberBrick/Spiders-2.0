@@ -1,4 +1,4 @@
-package tcb.spiderstpo.common.entity;
+package tcb.spiderstpo.common;
 
 import java.util.function.Predicate;
 import java.util.stream.Stream;
