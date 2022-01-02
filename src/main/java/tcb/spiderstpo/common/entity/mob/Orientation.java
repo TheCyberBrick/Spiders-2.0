@@ -34,7 +34,7 @@ public class Orientation {
 	}
 
 	public Vector3d getLocal(Vector3d global) {
-		return new Vector3d(this.localX.dotProduct(global), this.localY.dotProduct(global), this.localZ.dotProduct(global));
+		return new Vector3d(this.localX.dot(global), this.localY.dot(global), this.localZ.dot(global));
 	}
 
 	public Pair<Float, Float> getLocalRotation(Vector3d global) {

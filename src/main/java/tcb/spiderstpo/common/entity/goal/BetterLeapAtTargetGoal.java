@@ -23,21 +23,21 @@ public class BetterLeapAtTargetGoal<T extends MobEntity & IClimberEntity> extend
 	public BetterLeapAtTargetGoal(T leapingEntity, float leapMotionYIn) {
 		this.leaper = leapingEntity;
 		this.leapMotionY = leapMotionYIn;
-		this.setMutexFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE));
+		this.setFlags(EnumSet.of(Goal.Flag.JUMP, Goal.Flag.MOVE));
 	}
 
 	@Override
-	public boolean shouldExecute() {
-		if(!this.leaper.isBeingRidden()) {
-			this.leapTarget = this.leaper.getAttackTarget();
+	public boolean canUse() {
+		if(!this.leaper.isVehicle()) {
+			this.leapTarget = this.leaper.getTarget();
 
-			if(this.leapTarget != null && this.leaper.func_233570_aj_()) {
-				Triple<Vector3d, Vector3d, Vector3d> projectedVector = this.getProjectedVector(this.leapTarget.getPositionVec());
+			if(this.leapTarget != null && this.leaper.isOnGround()) {
+				Triple<Vector3d, Vector3d, Vector3d> projectedVector = this.getProjectedVector(this.leapTarget.position());
 
-				double dstSq = projectedVector.getLeft().lengthSquared();
-				double dstSqDot = projectedVector.getMiddle().lengthSquared();
+				double dstSq = projectedVector.getLeft().lengthSqr();
+				double dstSqDot = projectedVector.getMiddle().lengthSqr();
 
-				if(dstSq >= 4.0D && dstSq <= 16.0D && dstSqDot <= 1.2f && this.leaper.getRNG().nextInt(5) == 0) {
+				if(dstSq >= 4.0D && dstSq <= 16.0D && dstSqDot <= 1.2f && this.leaper.getRandom().nextInt(5) == 0) {
 					this.forwardJumpDirection = projectedVector.getLeft().normalize();
 					this.upwardJumpDirection = projectedVector.getRight().normalize();
 					return true;
@@ -48,38 +48,38 @@ public class BetterLeapAtTargetGoal<T extends MobEntity & IClimberEntity> extend
 	}
 
 	@Override
-	public boolean shouldContinueExecuting() {
-		return !this.leaper.func_233570_aj_();
+	public boolean canContinueToUse() {
+		return !this.leaper.isOnGround();
 	}
 
 	@Override
-	public void startExecuting() {
-		Vector3d motion = this.leaper.getMotion();
+	public void start() {
+		Vector3d motion = this.leaper.getDeltaMovement();
 
 		Vector3d jumpVector = this.forwardJumpDirection;
 
-		if(jumpVector.lengthSquared() > 1.0E-7D) {
+		if(jumpVector.lengthSqr() > 1.0E-7D) {
 			jumpVector = jumpVector.normalize().scale(0.4D).add(motion.scale(0.2D));
 		}
 
 		jumpVector = jumpVector.add(this.upwardJumpDirection.scale(this.leapMotionY));
 		jumpVector = new Vector3d(jumpVector.x * (1 - Math.abs(this.upwardJumpDirection.x)), jumpVector.y, jumpVector.z * (1 - Math.abs(this.upwardJumpDirection.z)));
 
-		this.leaper.setMotion(jumpVector);
+		this.leaper.setDeltaMovement(jumpVector);
 
 		Orientation orientation = this.leaper.getOrientation();
 
-		float rx = (float) orientation.localZ.dotProduct(jumpVector);
-		float ry = (float) orientation.localX.dotProduct(jumpVector);
+		float rx = (float) orientation.localZ.dot(jumpVector);
+		float ry = (float) orientation.localX.dot(jumpVector);
 
-		this.leaper.rotationYaw = 270.0f - (float) Math.toDegrees(MathHelper.atan2(rx, ry));
+		this.leaper.yRot = 270.0f - (float) Math.toDegrees(MathHelper.atan2(rx, ry));
 	}
 
 	protected Triple<Vector3d, Vector3d, Vector3d> getProjectedVector(Vector3d target) {
 		Orientation orientation = this.leaper.getOrientation();
-		Vector3d up = orientation.getGlobal(this.leaper.rotationYaw, -90.0f);
-		Vector3d diff = target.subtract(this.leaper.getPositionVec());
-		Vector3d dot = up.scale(up.dotProduct(diff));
+		Vector3d up = orientation.getGlobal(this.leaper.yRot, -90.0f);
+		Vector3d diff = target.subtract(this.leaper.position());
+		Vector3d dot = up.scale(up.dot(diff));
 		return Triple.of(diff.subtract(dot), dot, up);
 	}
 }

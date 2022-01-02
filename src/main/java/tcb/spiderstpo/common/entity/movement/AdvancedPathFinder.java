@@ -105,8 +105,8 @@ public class AdvancedPathFinder extends CustomPathFinder {
 		PathPoint currentPathPoint = start;
 		points.add(start);
 
-		while(currentPathPoint.previous != null) {
-			currentPathPoint = currentPathPoint.previous;
+		while(currentPathPoint.cameFrom != null) {
+			currentPathPoint = currentPathPoint.cameFrom;
 			points.add(currentPathPoint);
 		}
 	}
@@ -130,7 +130,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 	}
 
 	private static boolean isOmnidirectionalPoint(DirectionalPathPoint point) {
-		return point.nodeType == PathNodeType.WATER || point.nodeType == PathNodeType.LAVA;
+		return point.type == PathNodeType.WATER || point.type == PathNodeType.LAVA;
 	}
 
 	private Node retraceSidedPath(List<PathPoint> points, boolean isReversed) {
@@ -200,7 +200,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 							//Allow movement around corners, but insert new point with transitional side inbetween
 
 							Node intermediary;
-							if(Math.abs(currentSide.getXOffset()) == adx && Math.abs(currentSide.getYOffset()) == ady && Math.abs(currentSide.getZOffset()) == adz) {
+							if(Math.abs(currentSide.getStepX()) == adx && Math.abs(currentSide.getStepY()) == ady && Math.abs(currentSide.getStepZ()) == adz) {
 								intermediary = new Node(current, current.pathPoint.assignPathSide(nextSide));
 							} else {
 								intermediary = new Node(current, next.assignPathSide(currentSide));
@@ -212,7 +212,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 					} else if(d == 2) {
 						//Diagonal
 
-						int currentSidePlaneMatch = (currentSide.getXOffset() == -dx ? 1 : 0) + (currentSide.getYOffset() == -dy ? 1 : 0) + (currentSide.getZOffset() == -dz ? 1 : 0);
+						int currentSidePlaneMatch = (currentSide.getStepX() == -dx ? 1 : 0) + (currentSide.getStepY() == -dy ? 1 : 0) + (currentSide.getStepZ() == -dz ? 1 : 0);
 
 						if(currentSide == nextSide && currentSidePlaneMatch == 0) {
 
@@ -225,14 +225,14 @@ public class AdvancedPathFinder extends CustomPathFinder {
 							Node intermediary = null;
 							if(currentSidePlaneMatch == 2) {
 								for(Direction intermediarySide : getPathableSidesWithFallback(current.pathPoint)) {
-									if(intermediarySide != currentSide && (intermediarySide.getXOffset() == dx ? 1 : 0) + (intermediarySide.getYOffset() == dy ? 1 : 0) + (intermediarySide.getZOffset() == dz ? 1 : 0) == 2) {
+									if(intermediarySide != currentSide && (intermediarySide.getStepX() == dx ? 1 : 0) + (intermediarySide.getStepY() == dy ? 1 : 0) + (intermediarySide.getStepZ() == dz ? 1 : 0) == 2) {
 										intermediary = new Node(current, current.pathPoint.assignPathSide(intermediarySide));
 										break;
 									}
 								}
 							} else {
 								for(Direction intermediarySide : getPathableSidesWithFallback(next)) {
-									if(intermediarySide != nextSide && (intermediarySide.getXOffset() == -dx ? 1 : 0) + (intermediarySide.getYOffset() == -dy ? 1 : 0) + (intermediarySide.getZOffset() == -dz ? 1 : 0) == 2) {
+									if(intermediarySide != nextSide && (intermediarySide.getStepX() == -dx ? 1 : 0) + (intermediarySide.getStepY() == -dy ? 1 : 0) + (intermediarySide.getStepZ() == -dz ? 1 : 0) == 2) {
 										intermediary = new Node(current, next.assignPathSide(intermediarySide));
 										break;
 									}

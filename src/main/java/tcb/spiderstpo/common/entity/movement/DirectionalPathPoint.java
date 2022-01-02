@@ -38,15 +38,15 @@ public class DirectionalPathPoint extends PathPoint {
 	public DirectionalPathPoint(PathPoint point, long packed, boolean isDrop) {
 		this(point.x, point.y, point.z, packed, isDrop);
 
-		this.index = point.index;
-		this.totalPathDistance = point.totalPathDistance;
-		this.distanceToNext = point.distanceToNext;
-		this.distanceToTarget = point.distanceToTarget;
-		this.previous = point.previous;
-		this.visited = point.visited;
-		this.field_222861_j = point.field_222861_j;
+		this.heapIdx = point.heapIdx;
+		this.g = point.g;
+		this.h = point.h;
+		this.f = point.f;
+		this.cameFrom = point.cameFrom;
+		this.closed = point.closed;
+		this.walkedDistance = point.walkedDistance;
 		this.costMalus = point.costMalus;
-		this.nodeType = point.nodeType;
+		this.type = point.type;
 	}
 
 	public DirectionalPathPoint(PathPoint point) {
@@ -67,15 +67,15 @@ public class DirectionalPathPoint extends PathPoint {
 	public DirectionalPathPoint(PathPoint point, Direction pathSide) {
 		super(point.x, point.y, point.z);
 
-		this.index = point.index;
-		this.totalPathDistance = point.totalPathDistance;
-		this.distanceToNext = point.distanceToNext;
-		this.distanceToTarget = point.distanceToTarget;
-		this.previous = point.previous;
-		this.visited = point.visited;
-		this.field_222861_j = point.field_222861_j;
+		this.heapIdx = point.heapIdx;
+		this.g = point.g;
+		this.h = point.h;
+		this.f = point.f;
+		this.cameFrom = point.cameFrom;
+		this.closed = point.closed;
+		this.walkedDistance = point.walkedDistance;
 		this.costMalus = point.costMalus;
-		this.nodeType = point.nodeType;
+		this.type = point.type;
 
 		if(point instanceof DirectionalPathPoint) {
 			DirectionalPathPoint other = (DirectionalPathPoint) point;
@@ -98,17 +98,17 @@ public class DirectionalPathPoint extends PathPoint {
 	}
 
 	@Override
-	public PathPoint cloneMove(int x, int y, int z) {
+	public PathPoint cloneAndMove(int x, int y, int z) {
 		PathPoint pathPoint = new DirectionalPathPoint(x, y, z, this.pathableSides, this.pathSide, this.isDrop);
-		pathPoint.index = this.index;
-		pathPoint.totalPathDistance = this.totalPathDistance;
-		pathPoint.distanceToNext = this.distanceToNext;
-		pathPoint.distanceToTarget = this.distanceToTarget;
-		pathPoint.previous = this.previous;
-		pathPoint.visited = this.visited;
-		pathPoint.field_222861_j = this.field_222861_j;
+		pathPoint.heapIdx = this.heapIdx;
+		pathPoint.g = this.g;
+		pathPoint.h = this.h;
+		pathPoint.f = this.f;
+		pathPoint.cameFrom = this.cameFrom;
+		pathPoint.closed = this.closed;
+		pathPoint.walkedDistance = this.walkedDistance;
 		pathPoint.costMalus = this.costMalus;
-		pathPoint.nodeType = this.nodeType;
+		pathPoint.type = this.type;
 		return pathPoint;
 	}
 

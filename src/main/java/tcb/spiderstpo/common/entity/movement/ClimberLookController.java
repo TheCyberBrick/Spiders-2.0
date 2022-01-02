@@ -14,14 +14,14 @@ public class ClimberLookController<T extends MobEntity & IClimberEntity> extends
 	}
 
 	@Override
-	protected float getTargetPitch() {
-		Vector3d dir = new Vector3d(this.posX - this.mob.getPosX(), this.posY - this.mob.getPosYEye(), this.posZ - this.mob.getPosZ());
+	protected float getXRotD() {
+		Vector3d dir = new Vector3d(this.wantedX - this.mob.getX(), this.wantedY - this.mob.getEyeY(), this.wantedZ - this.mob.getZ());
 		return this.climber.getOrientation().getLocalRotation(dir).getRight();
 	}
 
 	@Override
-	protected float getTargetYaw() {
-		Vector3d dir = new Vector3d(this.posX - this.mob.getPosX(), this.posY - this.mob.getPosYEye(), this.posZ - this.mob.getPosZ());
+	protected float getYRotD() {
+		Vector3d dir = new Vector3d(this.wantedX - this.mob.getX(), this.wantedY - this.mob.getEyeY(), this.wantedZ - this.mob.getZ());
 		return this.climber.getOrientation().getLocalRotation(dir).getLeft();
 	}
 }

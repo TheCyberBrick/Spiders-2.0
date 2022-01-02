@@ -18,7 +18,7 @@ import tcb.spiderstpo.common.entity.mob.IMobEntityTickHook;
 
 @Mixin(MobEntity.class)
 public abstract class MobEntityMixin implements IMobEntityLivingTickHook, IMobEntityTickHook, IMobEntityRegisterGoalsHook, IMobEntityNavigatorHook {
-	@Inject(method = "livingTick()V", at = @At("HEAD"))
+	@Inject(method = "aiStep()V", at = @At("HEAD"))
 	private void onLivingTick(CallbackInfo ci) {
 		this.onLivingTick();
 	}
@@ -52,7 +52,7 @@ public abstract class MobEntityMixin implements IMobEntityLivingTickHook, IMobEn
 	@Override
 	public void onRegisterGoals() { }
 
-	@Inject(method = "createNavigator(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true)
+	@Inject(method = "createNavigation(Lnet/minecraft/world/World;)Lnet/minecraft/pathfinding/PathNavigator;", at = @At("HEAD"), cancellable = true)
 	private void onCreateNavigator(World world, CallbackInfoReturnable<PathNavigator> ci) {
 		PathNavigator navigator = this.onCreateNavigator(world);
 		if(navigator != null) {

@@ -28,7 +28,7 @@ public abstract class LivingEntityMixin implements ILivingEntityLookAtHook, ILiv
 		return vec;
 	}
 
-	@Inject(method = "notifyDataManagerChange(Lnet/minecraft/network/datasync/DataParameter;)V", at = @At("HEAD"))
+	@Inject(method = "onSyncedDataUpdated(Lnet/minecraft/network/datasync/DataParameter;)V", at = @At("HEAD"))
 	private void onNotifyDataManagerChange(DataParameter<?> key, CallbackInfo ci) {
 		this.onNotifyDataManagerChange(key);
 	}
@@ -53,7 +53,7 @@ public abstract class LivingEntityMixin implements ILivingEntityLookAtHook, ILiv
 		return false;
 	}
 
-	@Inject(method = "jump()V", at = @At("HEAD"), cancellable = true)
+	@Inject(method = "jumpFromGround()V", at = @At("HEAD"), cancellable = true)
 	private void onJump(CallbackInfo ci) {
 		if(this.onJump()) {
 			ci.cancel();

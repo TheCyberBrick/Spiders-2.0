@@ -59,7 +59,7 @@ public interface IAdvancedPathFindingEntity {
 	 * @return
 	 */
 	public default float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction, Predicate<Direction> sides) {
-		return entity.getPathPriority(nodeType);
+		return entity.getPathfindingMalus(nodeType);
 	}
 
 	/**

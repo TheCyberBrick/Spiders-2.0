@@ -5,5 +5,5 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ITag;
 
 public class ModTags {
-	public static final ITag<Block> NON_CLIMBABLE = BlockTags.makeWrapperTag("spiderstpo:non_climbable");
+	public static final ITag<Block> NON_CLIMBABLE = BlockTags.bind("spiderstpo:non_climbable");
 }

@@ -19,23 +19,23 @@ public class ClimberJumpController<T extends MobEntity & IClimberEntity> extends
 	}
 
 	@Override
-	public void setJumping() {
+	public void jump() {
 		this.setJumping(null);
 	}
 
 	public void setJumping(Vector3d dir) {
-		super.setJumping();
+		super.jump();
 		this.dir = dir;
 	}
 
 	@Override
 	public void tick() {
-		this.climber.setJumping(this.isJumping);
-		if(this.isJumping) {
+		this.climber.setJumping(this.jump);
+		if(this.jump) {
 			this.climber.setJumpDirection(this.dir);
 		} else if(this.dir == null) {
 			this.climber.setJumpDirection(null);
 		}
-		this.isJumping = false;
+		this.jump = false;
 	}
 }

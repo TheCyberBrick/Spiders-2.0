@@ -13,9 +13,9 @@ public class CommonEventHandlers {
 		Entity entity = event.getEntity();
 
 		if(entity instanceof CaveSpiderEntity) {
-			event.setNewSize(EntitySize.flexible(0.7f, 0.5f));
+			event.setNewSize(EntitySize.scalable(0.7f, 0.5f));
 		} else if(entity instanceof SpiderEntity) {
-			event.setNewSize(EntitySize.flexible(0.95f, 0.85f));
+			event.setNewSize(EntitySize.scalable(0.95f, 0.85f));
 		}
 	}
 }

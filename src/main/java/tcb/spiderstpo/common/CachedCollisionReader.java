@@ -35,7 +35,7 @@ public class CachedCollisionReader implements ICollisionReader {
 
 		for(int cx = minChunkX; cx <= maxChunkX; cx++) {
 			for(int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-				blockReaderCache[(cx - minChunkX) + (cz - minChunkZ) * width] = collisionReader.getBlockReader(cx, cz);
+				blockReaderCache[(cx - minChunkX) + (cz - minChunkZ) * width] = collisionReader.getChunkForCollisions(cx, cz);
 			}
 		}
 
@@ -43,8 +43,8 @@ public class CachedCollisionReader implements ICollisionReader {
 	}
 
 	@Override
-	public TileEntity getTileEntity(BlockPos pos) {
-		return this.collisionReader.getTileEntity(pos);
+	public TileEntity getBlockEntity(BlockPos pos) {
+		return this.collisionReader.getBlockEntity(pos);
 	}
 
 	@Override
@@ -63,12 +63,12 @@ public class CachedCollisionReader implements ICollisionReader {
 	}
 
 	@Override
-	public Stream<VoxelShape> func_230318_c_(Entity entity, AxisAlignedBB aabb, Predicate<Entity> predicate) {
-		return this.collisionReader.func_230318_c_(entity, aabb, predicate);
+	public Stream<VoxelShape> getEntityCollisions(Entity entity, AxisAlignedBB aabb, Predicate<Entity> predicate) {
+		return this.collisionReader.getEntityCollisions(entity, aabb, predicate);
 	}
 
 	@Override
-	public IBlockReader getBlockReader(int chunkX, int chunkZ) {
+	public IBlockReader getChunkForCollisions(int chunkX, int chunkZ) {
 		return this.blockReaderCache[(chunkX - minChunkX) + (chunkZ - minChunkZ) * width];
 	}
 }
