@@ -1,9 +1,9 @@
 package tcb.spiderstpo.common;
 
-import net.minecraft.block.Block;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.tags.BlockTags;
-import net.minecraft.tags.ITag;
+import net.minecraft.tags.Tag;
 
 public class ModTags {
-	public static final ITag<Block> NON_CLIMBABLE = BlockTags.bind("spiderstpo:non_climbable");
+	public static final Tag<Block> NON_CLIMBABLE = BlockTags.bind("spiderstpo:non_climbable");
 }

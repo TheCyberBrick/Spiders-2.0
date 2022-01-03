@@ -4,13 +4,13 @@ import java.util.function.Predicate;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.entity.MobEntity;
-import net.minecraft.pathfinding.PathNodeType;
-import net.minecraft.pathfinding.PathPoint;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.vector.Vector3i;
-import net.minecraft.world.IBlockReader;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.Node;
+import net.minecraft.core.Direction;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
+import net.minecraft.world.level.BlockGetter;
 
 public interface IAdvancedPathFindingEntity {
 	/**
@@ -41,7 +41,7 @@ public interface IAdvancedPathFindingEntity {
 	 * @param fallPathPoint
 	 * @return
 	 */
-	public default float getBridgePathingMalus(MobEntity entity, BlockPos pos, @Nullable PathPoint fallPathPoint) {
+	public default float getBridgePathingMalus(Mob entity, BlockPos pos, @Nullable Node fallPathPoint) {
 		return -1.0f;
 	}
 
@@ -58,7 +58,7 @@ public interface IAdvancedPathFindingEntity {
 	 * @param sides
 	 * @return
 	 */
-	public default float getPathingMalus(IBlockReader cache, MobEntity entity, PathNodeType nodeType, BlockPos pos, Vector3i direction, Predicate<Direction> sides) {
+	public default float getPathingMalus(BlockGetter cache, Mob entity, BlockPathTypes nodeType, BlockPos pos, Vec3i direction, Predicate<Direction> sides) {
 		return entity.getPathfindingMalus(nodeType);
 	}
 

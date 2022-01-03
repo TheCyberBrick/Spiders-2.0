@@ -4,10 +4,10 @@ import java.util.EnumSet;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.pathfinding.PathPoint;
-import net.minecraft.util.Direction;
+import net.minecraft.world.level.pathfinder.Node;
+import net.minecraft.core.Direction;
 
-public class DirectionalPathPoint extends PathPoint {
+public class DirectionalPathPoint extends Node {
 	protected static final long ALL_DIRECTIONS = AdvancedWalkNodeProcessor.packDirection(Direction.UP, AdvancedWalkNodeProcessor.packDirection(Direction.DOWN, AdvancedWalkNodeProcessor.packDirection(Direction.NORTH, AdvancedWalkNodeProcessor.packDirection(Direction.EAST, AdvancedWalkNodeProcessor.packDirection(Direction.SOUTH, AdvancedWalkNodeProcessor.packDirection(Direction.WEST, 0L))))));
 
 	protected static final Direction[] DIRECTIONS = Direction.values();
@@ -35,7 +35,7 @@ public class DirectionalPathPoint extends PathPoint {
 		this.isDrop = isDrop;
 	}
 
-	public DirectionalPathPoint(PathPoint point, long packed, boolean isDrop) {
+	public DirectionalPathPoint(Node point, long packed, boolean isDrop) {
 		this(point.x, point.y, point.z, packed, isDrop);
 
 		this.heapIdx = point.heapIdx;
@@ -49,7 +49,7 @@ public class DirectionalPathPoint extends PathPoint {
 		this.type = point.type;
 	}
 
-	public DirectionalPathPoint(PathPoint point) {
+	public DirectionalPathPoint(Node point) {
 		this(point, ALL_DIRECTIONS, false);
 	}
 
@@ -64,7 +64,7 @@ public class DirectionalPathPoint extends PathPoint {
 		this.isDrop = isDrop;
 	}
 
-	public DirectionalPathPoint(PathPoint point, Direction pathSide) {
+	public DirectionalPathPoint(Node point, Direction pathSide) {
 		super(point.x, point.y, point.z);
 
 		this.heapIdx = point.heapIdx;
@@ -98,8 +98,8 @@ public class DirectionalPathPoint extends PathPoint {
 	}
 
 	@Override
-	public PathPoint cloneAndMove(int x, int y, int z) {
-		PathPoint pathPoint = new DirectionalPathPoint(x, y, z, this.pathableSides, this.pathSide, this.isDrop);
+	public Node cloneAndMove(int x, int y, int z) {
+		Node pathPoint = new DirectionalPathPoint(x, y, z, this.pathableSides, this.pathSide, this.isDrop);
 		pathPoint.heapIdx = this.heapIdx;
 		pathPoint.g = this.g;
 		pathPoint.h = this.h;

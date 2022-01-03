@@ -1,37 +1,30 @@
 package tcb.spiderstpo.common.entity.movement;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Deque;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.Node;
+import net.minecraft.world.level.pathfinder.NodeEvaluator;
+import net.minecraft.world.level.pathfinder.Path;
 
 import javax.annotation.Nullable;
-
-import net.minecraft.pathfinding.NodeProcessor;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.pathfinding.PathNodeType;
-import net.minecraft.pathfinding.PathPoint;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.BlockPos;
+import java.util.*;
 
 public class AdvancedPathFinder extends CustomPathFinder {
-	private static class Node {
-		private final Node previous;
+	private static class PathFinderNode {
+		private final PathFinderNode previous;
 		private final DirectionalPathPoint pathPoint;
 		private final Direction side;
 		private final int depth;
 
-		private Node(@Nullable Node previous, DirectionalPathPoint pathPoint) {
+		private PathFinderNode(@Nullable PathFinderNode previous, DirectionalPathPoint pathPoint) {
 			this.previous = previous;
 			this.depth = previous != null ? previous.depth + 1 : 0;
 			this.pathPoint = pathPoint;
 			this.side = pathPoint.getPathSide();
 		}
 
-		private Node(Node previous, int depth, DirectionalPathPoint pathPoint) {
+		private PathFinderNode(PathFinderNode previous, int depth, DirectionalPathPoint pathPoint) {
 			this.previous = previous;
 			this.depth = depth;
 			this.pathPoint = pathPoint;
@@ -58,7 +51,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 			if(this.getClass() != obj.getClass()) {
 				return false;
 			}
-			Node other = (Node) obj;
+			PathFinderNode other = (PathFinderNode) obj;
 			if(this.pathPoint == null) {
 				if(other.pathPoint != null) {
 					return false;
@@ -75,19 +68,19 @@ public class AdvancedPathFinder extends CustomPathFinder {
 
 	private static final Direction[] DOWN = new Direction[] { Direction.DOWN };
 
-	public AdvancedPathFinder(NodeProcessor processor, int maxExpansions) {
+	public AdvancedPathFinder(NodeEvaluator processor, int maxExpansions) {
 		super(processor, maxExpansions);
 	}
 
 	@Override
-	protected Path createPath(PathPoint _targetPoint, BlockPos target, boolean isTargetReached) {
-		List<PathPoint> points = new ArrayList<>();
+	protected Path createPath(Node _targetPoint, BlockPos target, boolean isTargetReached) {
+		List<Node> points = new ArrayList<>();
 
 		//Backtrack path from target point back to entity
 		this.backtrackPath(points, _targetPoint);
 
 		//Retrace path with valid side transitions
-		Node end = this.retraceSidedPath(points, true);
+		PathFinderNode end = this.retraceSidedPath(points, true);
 
 		if(end == null) {
 			return new Path(Collections.emptyList(), target, isTargetReached);
@@ -101,8 +94,8 @@ public class AdvancedPathFinder extends CustomPathFinder {
 		return new Path(points, target, isTargetReached);
 	}
 
-	private void backtrackPath(List<PathPoint> points, PathPoint start) {
-		PathPoint currentPathPoint = start;
+	private void backtrackPath(List<Node> points, Node start) {
+		Node currentPathPoint = start;
 		points.add(start);
 
 		while(currentPathPoint.cameFrom != null) {
@@ -111,13 +104,13 @@ public class AdvancedPathFinder extends CustomPathFinder {
 		}
 	}
 
-	private void backtrackPath(List<PathPoint> points, Node start) {
-		Node currentNode = start;
+	private void backtrackPath(List<Node> points, PathFinderNode start) {
+		PathFinderNode currentPathFinderNode = start;
 		points.add(start.pathPoint);
 
-		while(currentNode.previous != null) {
-			currentNode = currentNode.previous;
-			points.add(currentNode.pathPoint);
+		while(currentPathFinderNode.previous != null) {
+			currentPathFinderNode = currentPathFinderNode.previous;
+			points.add(currentPathFinderNode.pathPoint);
 		}
 	}
 
@@ -130,26 +123,26 @@ public class AdvancedPathFinder extends CustomPathFinder {
 	}
 
 	private static boolean isOmnidirectionalPoint(DirectionalPathPoint point) {
-		return point.type == PathNodeType.WATER || point.type == PathNodeType.LAVA;
+		return point.type == BlockPathTypes.WATER || point.type == BlockPathTypes.LAVA;
 	}
 
-	private Node retraceSidedPath(List<PathPoint> points, boolean isReversed) {
+	private PathFinderNode retraceSidedPath(List<Node> points, boolean isReversed) {
 		if(points.isEmpty()) {
 			return null;
 		}
 
-		final Deque<Node> queue = new LinkedList<>();
+		final Deque<PathFinderNode> queue = new LinkedList<>();
 
 		final DirectionalPathPoint targetPoint = this.ensureDirectional(points.get(0));
 
 		for(Direction direction : getPathableSidesWithFallback(targetPoint)) {
-			queue.add(new Node(null, targetPoint.assignPathSide(direction)));
+			queue.add(new PathFinderNode(null, targetPoint.assignPathSide(direction)));
 		}
 
-		Node end = null;
+		PathFinderNode end = null;
 
 		final int maxExpansions = 200;
-		final Set<Node> checkedSet = new HashSet<>();
+		final Set<PathFinderNode> checkedSet = new HashSet<>();
 
 		int expansions = 0;
 		while(!queue.isEmpty()) {
@@ -157,7 +150,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 				break;
 			}
 
-			Node current = queue.removeFirst();
+			PathFinderNode current = queue.removeFirst();
 
 			if(current.depth == points.size() - 1) {
 				end = current;
@@ -169,12 +162,12 @@ public class AdvancedPathFinder extends CustomPathFinder {
 			DirectionalPathPoint next = this.ensureDirectional(points.get(current.depth + 1));
 
 			for(Direction nextSide : getPathableSidesWithFallback(next)) {
-				Node nextNode = null;
+				PathFinderNode nextPathFinderNode = null;
 
 				if((isReversed && current.pathPoint.isDrop()) || (!isReversed && next.isDrop())) {
 
 					//Side doesn't matter if node represents a drop
-					nextNode = new Node(current, next.assignPathSide(nextSide));
+					nextPathFinderNode = new PathFinderNode(current, next.assignPathSide(nextSide));
 
 				} else {
 					int dx = (int)Math.signum(next.x - current.pathPoint.x);
@@ -193,20 +186,20 @@ public class AdvancedPathFinder extends CustomPathFinder {
 						if(nextSide == currentSide) {
 
 							//Allow movement on the same side
-							nextNode = new Node(current, next.assignPathSide(nextSide));
+							nextPathFinderNode = new PathFinderNode(current, next.assignPathSide(nextSide));
 
 						} else if(nextSide.getAxis() != currentSide.getAxis()) {
 
 							//Allow movement around corners, but insert new point with transitional side inbetween
 
-							Node intermediary;
+							PathFinderNode intermediary;
 							if(Math.abs(currentSide.getStepX()) == adx && Math.abs(currentSide.getStepY()) == ady && Math.abs(currentSide.getStepZ()) == adz) {
-								intermediary = new Node(current, current.pathPoint.assignPathSide(nextSide));
+								intermediary = new PathFinderNode(current, current.pathPoint.assignPathSide(nextSide));
 							} else {
-								intermediary = new Node(current, next.assignPathSide(currentSide));
+								intermediary = new PathFinderNode(current, next.assignPathSide(currentSide));
 							}
 
-							nextNode = new Node(intermediary, intermediary.depth, next.assignPathSide(nextSide));
+							nextPathFinderNode = new PathFinderNode(intermediary, intermediary.depth, next.assignPathSide(nextSide));
 
 						}
 					} else if(d == 2) {
@@ -217,39 +210,39 @@ public class AdvancedPathFinder extends CustomPathFinder {
 						if(currentSide == nextSide && currentSidePlaneMatch == 0) {
 
 							//Allow diagonal movement, no need to insert transitional side since the diagonal's plane's normal is the same as the path's side
-							nextNode = new Node(current, next.assignPathSide(nextSide));
+							nextPathFinderNode = new PathFinderNode(current, next.assignPathSide(nextSide));
 
 						} else {
 							//Allow movement, but insert new point with transitional side inbetween
 
-							Node intermediary = null;
+							PathFinderNode intermediary = null;
 							if(currentSidePlaneMatch == 2) {
 								for(Direction intermediarySide : getPathableSidesWithFallback(current.pathPoint)) {
 									if(intermediarySide != currentSide && (intermediarySide.getStepX() == dx ? 1 : 0) + (intermediarySide.getStepY() == dy ? 1 : 0) + (intermediarySide.getStepZ() == dz ? 1 : 0) == 2) {
-										intermediary = new Node(current, current.pathPoint.assignPathSide(intermediarySide));
+										intermediary = new PathFinderNode(current, current.pathPoint.assignPathSide(intermediarySide));
 										break;
 									}
 								}
 							} else {
 								for(Direction intermediarySide : getPathableSidesWithFallback(next)) {
 									if(intermediarySide != nextSide && (intermediarySide.getStepX() == -dx ? 1 : 0) + (intermediarySide.getStepY() == -dy ? 1 : 0) + (intermediarySide.getStepZ() == -dz ? 1 : 0) == 2) {
-										intermediary = new Node(current, next.assignPathSide(intermediarySide));
+										intermediary = new PathFinderNode(current, next.assignPathSide(intermediarySide));
 										break;
 									}
 								}
 							}
 
 							if(intermediary != null) {
-								nextNode = new Node(intermediary, intermediary.depth, next.assignPathSide(nextSide));
+								nextPathFinderNode = new PathFinderNode(intermediary, intermediary.depth, next.assignPathSide(nextSide));
 							} else {
-								nextNode = new Node(current, next.assignPathSide(nextSide));
+								nextPathFinderNode = new PathFinderNode(current, next.assignPathSide(nextSide));
 							}
 						}
 					}
 				}
 
-				if(nextNode != null && checkedSet.add(nextNode)) {
-					queue.addLast(nextNode);
+				if(nextPathFinderNode != null && checkedSet.add(nextPathFinderNode)) {
+					queue.addLast(nextPathFinderNode);
 				}
 			}
 		}
@@ -257,7 +250,7 @@ public class AdvancedPathFinder extends CustomPathFinder {
 		return end;
 	}
 
-	private DirectionalPathPoint ensureDirectional(PathPoint point) {
+	private DirectionalPathPoint ensureDirectional(Node point) {
 		if(point instanceof DirectionalPathPoint) {
 			return (DirectionalPathPoint) point;
 		} else {

@@ -2,10 +2,10 @@ package tcb.spiderstpo.common.entity.mob;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.pathfinding.PathNavigator;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.level.Level;
 
 public interface IMobEntityNavigatorHook {
 	@Nullable
-	public PathNavigator onCreateNavigator(World world);
+	public PathNavigation onCreateNavigator(Level world);
 }

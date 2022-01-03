@@ -1,7 +1,7 @@
 package tcb.spiderstpo.common;
 
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec3;
 
 public class Matrix4f {
 	public float m00, m01, m02, m03;
@@ -34,12 +34,12 @@ public class Matrix4f {
 
 	public Matrix4f(float angle, float x, float y, float z) {
 		this();
-		float sx = MathHelper.sin(0.5F * angle * x);
-		float cx = MathHelper.cos(0.5F * angle * x);
-		float sy = MathHelper.sin(0.5F * angle * y);
-		float cy = MathHelper.cos(0.5F * angle * y);
-		float sz = MathHelper.sin(0.5F * angle * z);
-		float cz = MathHelper.cos(0.5F * angle * z);
+		float sx = Mth.sin(0.5F * angle * x);
+		float cx = Mth.cos(0.5F * angle * x);
+		float sy = Mth.sin(0.5F * angle * y);
+		float cy = Mth.cos(0.5F * angle * y);
+		float sz = Mth.sin(0.5F * angle * z);
+		float cz = Mth.cos(0.5F * angle * z);
 		float qx = sx * cy * cz + cx * sy * sz;
 		float qy = cx * sy * cz - sx * cy * sz;
 		float qz = sx * sy * cz + cx * cy * sz;
@@ -107,11 +107,11 @@ public class Matrix4f {
 		this.m33 = m33;
 	}
 
-	public Vector3d multiply(Vector3d point) {
+	public Vec3 multiply(Vec3 point) {
 		return this.multiply(point, 0);
 	}
 
-	public Vector3d multiply(Vector3d point, float w) {
-		return new Vector3d(this.m00 * point.x + this.m01 * point.y + this.m02 * point.z + this.m03 * w, this.m10 * point.x + this.m11 * point.y + this.m12 * point.z + this.m13 * w, this.m20 * point.x + this.m21 * point.y + this.m22 * point.z + this.m23 * w);
+	public Vec3 multiply(Vec3 point, float w) {
+		return new Vec3(this.m00 * point.x + this.m01 * point.y + this.m02 * point.z + this.m03 * w, this.m10 * point.x + this.m11 * point.y + this.m12 * point.z + this.m13 * w, this.m20 * point.x + this.m21 * point.y + this.m22 * point.z + this.m23 * w);
 	}
 }

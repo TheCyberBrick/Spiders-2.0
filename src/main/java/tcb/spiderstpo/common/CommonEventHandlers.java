@@ -1,9 +1,9 @@
 package tcb.spiderstpo.common;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntitySize;
-import net.minecraft.entity.monster.CaveSpiderEntity;
-import net.minecraft.entity.monster.SpiderEntity;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityDimensions;
+import net.minecraft.world.entity.monster.CaveSpider;
+import net.minecraft.world.entity.monster.Spider;
 import net.minecraftforge.event.entity.EntityEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -12,10 +12,10 @@ public class CommonEventHandlers {
 	public static void onEntitySize(EntityEvent.Size event) {
 		Entity entity = event.getEntity();
 
-		if(entity instanceof CaveSpiderEntity) {
-			event.setNewSize(EntitySize.scalable(0.7f, 0.5f));
-		} else if(entity instanceof SpiderEntity) {
-			event.setNewSize(EntitySize.scalable(0.95f, 0.85f));
+		if(entity instanceof CaveSpider) {
+			event.setNewSize(EntityDimensions.scalable(0.7f, 0.5f));
+		} else if(entity instanceof Spider) {
+			event.setNewSize(EntityDimensions.scalable(0.95f, 0.85f));
 		}
 	}
 }

@@ -5,11 +5,12 @@
   "refmap": "spiderstpo.refmap.json",
   "package": "tcb.spiderstpo.mixins",
   "mixins": [
+    "BetterSpiderEntityMixin",
+    "ClimberEntityMixin",
     "EntityMixin",
     "LivingEntityMixin",
     "MobEntityMixin",
-    "ClimberEntityMixin",
-    "BetterSpiderEntityMixin"
+    "access.BlockCollisionsAccess"
   ],
   "client": [
     "LivingEntityClientMixin"

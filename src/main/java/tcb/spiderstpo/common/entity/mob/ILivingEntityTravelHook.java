@@ -1,7 +1,7 @@
 package tcb.spiderstpo.common.entity.mob;
 
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.phys.Vec3;
 
 public interface ILivingEntityTravelHook {
-	public boolean onTravel(Vector3d relative, boolean pre);
+	public boolean onTravel(Vec3 relative, boolean pre);
 }

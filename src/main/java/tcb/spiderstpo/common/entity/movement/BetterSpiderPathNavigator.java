@@ -1,17 +1,17 @@
 package tcb.spiderstpo.common.entity.movement;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.MobEntity;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.Level;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 
-public class BetterSpiderPathNavigator<T extends MobEntity & IClimberEntity> extends AdvancedClimberPathNavigator<T> {
+public class BetterSpiderPathNavigator<T extends Mob & IClimberEntity> extends AdvancedClimberPathNavigator<T> {
 	private boolean useVanillaBehaviour;
 	private BlockPos targetPosition;
 
-	public BetterSpiderPathNavigator(T entity, World worldIn, boolean useVanillaBehaviour) {
+	public BetterSpiderPathNavigator(T entity, Level worldIn, boolean useVanillaBehaviour) {
 		super(entity, worldIn, false, true, true);
 		this.useVanillaBehaviour = useVanillaBehaviour;
 	}

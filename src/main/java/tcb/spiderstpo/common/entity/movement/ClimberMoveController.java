@@ -2,22 +2,22 @@ package tcb.spiderstpo.common.entity.movement;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.ai.controller.JumpController;
-import net.minecraft.entity.ai.controller.MovementController;
-import net.minecraft.pathfinding.NodeProcessor;
-import net.minecraft.pathfinding.PathNavigator;
-import net.minecraft.pathfinding.PathNodeType;
-import net.minecraft.util.Direction;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.control.JumpControl;
+import net.minecraft.world.entity.ai.control.MoveControl;
+import net.minecraft.world.level.pathfinder.NodeEvaluator;
+import net.minecraft.world.entity.ai.navigation.PathNavigation;
+import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.Vec3;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 import tcb.spiderstpo.common.entity.mob.Orientation;
 
-public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends MovementController {
+public class ClimberMoveController<T extends Mob & IClimberEntity> extends MoveControl {
 	protected final IClimberEntity climber;
 
 	@Nullable
@@ -46,12 +46,12 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 	public void tick() {
 		double speed = this.climber.getMovementSpeed() * this.speedModifier;
 
-		if(this.operation == MovementController.Action.STRAFE) {
-			this.operation = MovementController.Action.WAIT;
+		if(this.operation == MoveControl.Operation.STRAFE) {
+			this.operation = MoveControl.Operation.WAIT;
 
 			float forward = this.strafeForwards;
 			float strafe = this.strafeRight;
-			float moveSpeed = MathHelper.sqrt(forward * forward + strafe * strafe);
+			float moveSpeed = Mth.sqrt(forward * forward + strafe * strafe);
 			if(moveSpeed < 1.0F) {
 				moveSpeed = 1.0F;
 			}
@@ -62,8 +62,8 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 
 			Orientation orientation = this.climber.getOrientation();
 
-			Vector3d forwardVector = orientation.getGlobal(this.mob.yRot, 0);
-			Vector3d strafeVector = orientation.getGlobal(this.mob.yRot - 90.0f, 0);
+			Vec3 forwardVector = orientation.getGlobal(this.mob.getYRot(), 0);
+			Vec3 strafeVector = orientation.getGlobal(this.mob.getYRot() - 90.0f, 0);
 
 			if(!this.isWalkableAtOffset(forwardVector.x * forward + strafeVector.x * strafe, forwardVector.y * forward + strafeVector.y * strafe, forwardVector.z * forward + strafeVector.z * strafe)) {
 				this.strafeForwards = 1.0F;
@@ -73,8 +73,8 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 			this.mob.setSpeed((float) speed);
 			this.mob.setZza(this.strafeForwards);
 			this.mob.setXxa(this.strafeRight);
-		} else if(this.operation == MovementController.Action.MOVE_TO) {
-			this.operation = MovementController.Action.WAIT;
+		} else if(this.operation == MoveControl.Operation.MOVE_TO) {
+			this.operation = MoveControl.Operation.WAIT;
 
 			double dx = this.wantedX - this.mob.getX();
 			double dy = this.wantedY - this.mob.getY();
@@ -83,7 +83,7 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 			if(this.side != null && this.block != null) {
 				VoxelShape shape = this.mob.level.getBlockState(this.block).getCollisionShape(this.mob.level, this.block);
 
-				AxisAlignedBB aabb = this.mob.getBoundingBox();
+				AABB aabb = this.mob.getBoundingBox();
 
 				double ox = 0;
 				double oy = 0;
@@ -123,7 +123,7 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 					break;
 				}
 
-				AxisAlignedBB blockAabb = new AxisAlignedBB(this.block.relative(this.side.getOpposite()));
+				AABB blockAabb = new AABB(this.block.relative(this.side.getOpposite()));
 
 				//If mob is on the pathing side block then only apply the offsets if the block is above the according side of the voxel shape
 				if(aabb.intersects(blockAabb)) {
@@ -203,7 +203,7 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 
 			Direction groundDir = this.climber.getGroundDirection().getLeft();
 
-			Vector3d jumpDir = null;
+			Vec3 jumpDir = null;
 
 			if(this.side != null && verticalOffset > reach - 0.05f && groundDir != this.side && groundDir.getAxis() != this.side.getAxis()) {
 				double hdx = (1 - Math.abs(mainOffsetDir.getStepX())) * dx;
@@ -217,18 +217,18 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 					dz -= this.side.getStepZ() * 0.2f;
 
 					if(hdsq < 0.1f) {
-						jumpDir = new Vector3d(mainOffsetDir.getStepX(), mainOffsetDir.getStepY(), mainOffsetDir.getStepZ());
+						jumpDir = new Vec3(mainOffsetDir.getStepX(), mainOffsetDir.getStepY(), mainOffsetDir.getStepZ());
 					}
 				}
 			}
 
 			Orientation orientation = this.climber.getOrientation();
 
-			Vector3d up = orientation.getGlobal(this.mob.yRot, -90);
+			Vec3 up = orientation.getGlobal(this.mob.getYRot(), -90);
 
-			Vector3d offset = new Vector3d(dx, dy, dz);
+			Vec3 offset = new Vec3(dx, dy, dz);
 
-			Vector3d targetDir = offset.subtract(up.scale(offset.dot(up)));
+			Vec3 targetDir = offset.subtract(up.scale(offset.dot(up)));
 			double targetDist = targetDir.length();
 			targetDir = targetDir.normalize();
 
@@ -238,20 +238,20 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 				float rx = (float) orientation.localZ.dot(targetDir);
 				float ry = (float) orientation.localX.dot(targetDir);
 
-				this.mob.yRot = this.rotlerp(this.mob.yRot, 270.0f - (float) Math.toDegrees(MathHelper.atan2(rx, ry)), 90.0f);
+				this.mob.setYRot(this.rotlerp(this.mob.getYRot(), 270.0f - (float) Math.toDegrees(Mth.atan2(rx, ry)), 90.0f));
 
 				if(jumpDir == null && this.side != null && targetDist < 0.1D && groundDir == this.side.getOpposite()) {
-					jumpDir = new Vector3d(this.side.getStepX(), this.side.getStepY(), this.side.getStepZ());
+					jumpDir = new Vec3(this.side.getStepX(), this.side.getStepY(), this.side.getStepZ());
 				}
 				
 				if(jumpDir == null && this.side != null && Math.abs(this.climber.getGroundDirection().getRight().y) > 0.5f && (!this.climber.canAttachToSide(this.side) || !this.climber.canAttachToSide(Direction.getNearest(dx, dy, dz))) && this.wantedY > this.mob.getY() + 0.1f && verticalOffset > this.mob.maxUpStep) {
-					jumpDir = new Vector3d(0, 1, 0);
+					jumpDir = new Vec3(0, 1, 0);
 				}
 
 				if(jumpDir != null) {
 					this.mob.setSpeed((float) speed * 0.5f);
 
-					JumpController jumpController = this.mob.getJumpControl();
+					JumpControl jumpController = this.mob.getJumpControl();
 
 					if(jumpController instanceof ClimberJumpController) {
 						((ClimberJumpController) jumpController).setJumping(jumpDir);
@@ -260,11 +260,11 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 					this.mob.setSpeed((float) speed);
 				}
 			}
-		} else if(this.operation == MovementController.Action.JUMPING) {
+		} else if(this.operation == MoveControl.Operation.JUMPING) {
 			this.mob.setSpeed((float) speed);
 
 			if(this.mob.isOnGround()) {
-				this.operation = MovementController.Action.WAIT;
+				this.operation = MoveControl.Operation.WAIT;
 			}
 		} else {
 			this.mob.setZza(0);
@@ -272,12 +272,12 @@ public class ClimberMoveController<T extends MobEntity & IClimberEntity> extends
 	}
 
 	private boolean isWalkableAtOffset(double x, double y, double z) {
-		PathNavigator navigator = this.mob.getNavigation();
+		PathNavigation navigator = this.mob.getNavigation();
 
 		if(navigator != null) {
-			NodeProcessor processor = navigator.getNodeEvaluator();
+			NodeEvaluator processor = navigator.getNodeEvaluator();
 
-			if(processor != null && processor.getBlockPathType(this.mob.level, MathHelper.floor(this.mob.getX() + x), MathHelper.floor(this.mob.getY() + this.mob.getBbHeight() * 0.5f + y), MathHelper.floor(this.mob.getZ() + z)) != PathNodeType.WALKABLE) {
+			if(processor != null && processor.getBlockPathType(this.mob.level, Mth.floor(this.mob.getX() + x), Mth.floor(this.mob.getY() + this.mob.getBbHeight() * 0.5f + y), Mth.floor(this.mob.getZ() + z)) != BlockPathTypes.WALKABLE) {
 				return false;
 			}
 		}

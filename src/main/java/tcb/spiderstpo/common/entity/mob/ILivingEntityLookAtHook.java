@@ -1,8 +1,8 @@
 package tcb.spiderstpo.common.entity.mob;
 
-import net.minecraft.command.arguments.EntityAnchorArgument;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
+import net.minecraft.world.phys.Vec3;
 
 public interface ILivingEntityLookAtHook {
-	public Vector3d onLookAt(EntityAnchorArgument.Type anchor, Vector3d vec);
+	public Vec3 onLookAt(EntityAnchorArgument.Anchor anchor, Vec3 vec);
 }

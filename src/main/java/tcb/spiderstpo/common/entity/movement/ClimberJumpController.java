@@ -2,16 +2,16 @@ package tcb.spiderstpo.common.entity.movement;
 
 import javax.annotation.Nullable;
 
-import net.minecraft.entity.MobEntity;
-import net.minecraft.entity.ai.controller.JumpController;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.control.JumpControl;
+import net.minecraft.world.phys.Vec3;
 import tcb.spiderstpo.common.entity.mob.IClimberEntity;
 
-public class ClimberJumpController<T extends MobEntity & IClimberEntity> extends JumpController {
+public class ClimberJumpController<T extends Mob & IClimberEntity> extends JumpControl {
 	protected final T climber;
 
 	@Nullable
-	protected Vector3d dir;
+	protected Vec3 dir;
 
 	public ClimberJumpController(T mob) {
 		super(mob);
@@ -23,7 +23,7 @@ public class ClimberJumpController<T extends MobEntity & IClimberEntity> extends
 		this.setJumping(null);
 	}
 
-	public void setJumping(Vector3d dir) {
+	public void setJumping(Vec3 dir) {
 		super.jump();
 		this.dir = dir;
 	}

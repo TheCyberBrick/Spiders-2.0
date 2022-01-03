@@ -8,10 +8,10 @@ import javax.annotation.Nullable;
 import org.apache.commons.lang3.tuple.Pair;
 
 import it.unimi.dsi.fastutil.floats.FloatArrays;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.shapes.VoxelShapes;
-import net.minecraft.util.math.vector.Vector3d;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.Vec3;
 
 public class CollisionSmoothingUtil {
 	private static float invSqrt(float x) {
@@ -37,10 +37,10 @@ public class CollisionSmoothingUtil {
 			float prx = rsx * erx[i];
 			float pry = rsy * ery[i];
 			float prz = rsz * erz[i];
-			//float k1 = MathHelper.sqrt(prx * prx + pry * pry + prz * prz);
+			//float k1 = Mth.sqrt(prx * prx + pry * pry + prz * prz);
 			//float ellipsoidDst = (k1 - 1.0f) * Math.min(Math.min(erx[i], ery[i]), erz[i]);
 			float k1 = invSqrt(prx * prx + pry * pry + prz * prz);
-			float ellipsoidDst = MathHelper.sqrt(rsx * rsx + rsy * rsy + rsz * rsz) * (1.0f - 1.0f * k1);
+			float ellipsoidDst = Mth.sqrt(rsx * rsx + rsy * rsy + rsz * rsz) * (1.0f - 1.0f * k1);
 			/*float prx2 = rsx * erx[i] * erx[i];
 			float pry2 = rsy * ery[i] * ery[i];
 			float prz2 = rsz * erz[i] * erz[i];
@@ -48,26 +48,26 @@ public class CollisionSmoothingUtil {
 			float ellipsoidDst = k1 * (k1 - 1.0f) * k2;*/
 
 			//Smooth intersection - https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-			float h = MathHelper.clamp(0.5f - 0.5f * (ellipsoidDst + planeDst) * invPlaneSmoothingRange, 0.0f, 1.0f);
+			float h = Mth.clamp(0.5f - 0.5f * (ellipsoidDst + planeDst) * invPlaneSmoothingRange, 0.0f, 1.0f);
 			ellipsoidDst = ellipsoidDst + (-planeDst - ellipsoidDst) * h + planeSmoothingRange * h * (1.0f - h);
 
 			if(i == 0) {
 				sdfDst = ellipsoidDst;
 			} else {
 				//Smooth min - https://www.iquilezles.org/www/articles/smin/smin.htm
-				h = MathHelper.clamp(0.5f + 0.5f * (ellipsoidDst - sdfDst) * invSmoothingRange, 0.0f, 1.0f);
+				h = Mth.clamp(0.5f + 0.5f * (ellipsoidDst - sdfDst) * invSmoothingRange, 0.0f, 1.0f);
 				sdfDst = ellipsoidDst + (sdfDst - ellipsoidDst) * h - smoothingRange * h * (1.0f - h);
 			}
 		}
 
 		//Smooth intersection - https://iquilezles.org/www/articles/distfunctions/distfunctions.htm
-		float h = MathHelper.clamp(0.5f - 0.5f * (sdfDst + planeDst) * invPlaneSmoothingRange, 0.0f, 1.0f);
+		float h = Mth.clamp(0.5f - 0.5f * (sdfDst + planeDst) * invPlaneSmoothingRange, 0.0f, 1.0f);
 		sdfDst = sdfDst + (-planeDst - sdfDst) * h + planeSmoothingRange * h * (1.0f - h);
 
 		return sdfDst;
 	}
 
-	private static class BoxConsumer implements VoxelShapes.ILineConsumer {
+	private static class BoxConsumer implements Shapes.DoubleLineConsumer {
 		private int capacity = 16;
 		private int size = 0;
 
@@ -79,10 +79,10 @@ public class CollisionSmoothingUtil {
 		private float[] ecy = new float[this.capacity];
 		private float[] ecz = new float[this.capacity];
 
-		private final Vector3d p;
+		private final Vec3 p;
 		private final float boxScale;
 
-		private BoxConsumer(Vector3d p, float boxScale) {
+		private BoxConsumer(Vec3 p, float boxScale) {
 			this.p = p;
 			this.boxScale = boxScale;
 		}
@@ -112,7 +112,7 @@ public class CollisionSmoothingUtil {
 	}
 
 	@Nullable
-	public static Pair<Vector3d, Vector3d> findClosestPoint(Consumer<VoxelShapes.ILineConsumer> consumer, Vector3d pp, Vector3d pn, float smoothingRange, float planeSmoothingRange, float boxScale, float dx, int iters, float threshold, Vector3d p) {
+	public static Pair<Vec3, Vec3> findClosestPoint(Consumer<Shapes.DoubleLineConsumer> consumer, Vec3 pp, Vec3 pn, float smoothingRange, float planeSmoothingRange, float boxScale, float dx, int iters, float threshold, Vec3 p) {
 		BoxConsumer boxConsumer = new BoxConsumer(p, boxScale);
 
 		consumer.accept(boxConsumer);
@@ -125,7 +125,7 @@ public class CollisionSmoothingUtil {
 	}
 
 	@Nullable
-	public static Pair<Vector3d, Vector3d> findClosestPoint(List<AxisAlignedBB> boxes, Vector3d pp, Vector3d pn, float smoothingRange, float planeSmoothingRange, float boxScale, float dx, int iters, float threshold, Vector3d p) {
+	public static Pair<Vec3, Vec3> findClosestPoint(List<AABB> boxes, Vec3 pp, Vec3 pn, float smoothingRange, float planeSmoothingRange, float boxScale, float dx, int iters, float threshold, Vec3 p) {
 		if(boxes.isEmpty()) {
 			return null;
 		}
@@ -139,7 +139,7 @@ public class CollisionSmoothingUtil {
 		float[] ecz = new float[boxes.size()];
 
 		int i = 0;
-		for(AxisAlignedBB box : boxes) {
+		for(AABB box : boxes) {
 			erx[i] = 1.0f / ((float) (box.maxX - box.minX) / 2 * boxScale);
 			ery[i] = 1.0f / ((float) (box.maxY - box.minY) / 2 * boxScale);
 			erz[i] = 1.0f / ((float) (box.maxZ - box.minZ) / 2 * boxScale);
@@ -155,7 +155,7 @@ public class CollisionSmoothingUtil {
 	}
 
 	@Nullable
-	private static Pair<Vector3d, Vector3d> findClosestPoint(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, int count, Vector3d pp, Vector3d pn, float smoothingRange, float planeSmoothingRange, float dx, int iters, float threshold, Vector3d p) {
+	private static Pair<Vec3, Vec3> findClosestPoint(float[] erx, float[] ery, float[] erz, float[] ecx, float[] ecy, float[] ecz, int count, Vec3 pp, Vec3 pn, float smoothingRange, float planeSmoothingRange, float dx, int iters, float threshold, Vec3 p) {
 		float halfThreshold = threshold * 0.5f;
 
 		float plx = (float) (pp.x - p.x);
@@ -200,7 +200,7 @@ public class CollisionSmoothingUtil {
 			pz += gz * step;
 
 			if(absDst < threshold) {
-				return Pair.of(new Vector3d(p.x + px, p.y + py, p.z + pz), new Vector3d(-gx, -gy, -gz).normalize());
+				return Pair.of(new Vec3(p.x + px, p.y + py, p.z + pz), new Vec3(-gx, -gy, -gz).normalize());
 			}
 		}
 

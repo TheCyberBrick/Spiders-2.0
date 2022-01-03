@@ -47,6 +47,6 @@ Spiders 2.0 enables spiders to walk along walls and ceilings and it also improve
 [[dependencies.spiderstpo]]
     modId="minecraft"
     mandatory=true
-    versionRange="[1.16.3]"
+    versionRange="[1.18,)"
     ordering="NONE"
     side="BOTH"

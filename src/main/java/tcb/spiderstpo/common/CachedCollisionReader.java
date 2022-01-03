@@ -1,37 +1,39 @@
 package tcb.spiderstpo.common;
 
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.fluid.FluidState;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.math.AxisAlignedBB;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.shapes.VoxelShape;
-import net.minecraft.world.IBlockReader;
-import net.minecraft.world.ICollisionReader;
-import net.minecraft.world.border.WorldBorder;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.CollisionGetter;
+import net.minecraft.world.level.border.WorldBorder;
+import org.jetbrains.annotations.Nullable;
 
-public class CachedCollisionReader implements ICollisionReader {
-	private final ICollisionReader collisionReader;
-	private final IBlockReader[] blockReaderCache;
+public class CachedCollisionReader implements CollisionGetter {
+	private final CollisionGetter collisionReader;
+	private final BlockGetter[] blockReaderCache;
 	private final int minChunkX, minChunkZ, width;
 
-	public CachedCollisionReader(ICollisionReader collisionReader, AxisAlignedBB aabb) {
+	public CachedCollisionReader(CollisionGetter collisionReader, AABB aabb) {
 		this.collisionReader = collisionReader;
 
-		this.minChunkX = ((MathHelper.floor(aabb.minX - 1.0E-7D) - 1) >> 4);
-		int maxChunkX = ((MathHelper.floor(aabb.maxX + 1.0E-7D) + 1) >> 4);
-		this.minChunkZ = ((MathHelper.floor(aabb.minZ - 1.0E-7D) - 1) >> 4);
-		int maxChunkZ = ((MathHelper.floor(aabb.maxZ + 1.0E-7D) + 1) >> 4);
+		this.minChunkX = ((Mth.floor(aabb.minX - 1.0E-7D) - 1) >> 4);
+		int maxChunkX = ((Mth.floor(aabb.maxX + 1.0E-7D) + 1) >> 4);
+		this.minChunkZ = ((Mth.floor(aabb.minZ - 1.0E-7D) - 1) >> 4);
+		int maxChunkZ = ((Mth.floor(aabb.maxZ + 1.0E-7D) + 1) >> 4);
 
 		this.width = maxChunkX - this.minChunkX + 1;
 		int depth = maxChunkZ - this.minChunkZ + 1;
 
-		IBlockReader[] blockReaderCache = new IBlockReader[width * depth];
+		BlockGetter[] blockReaderCache = new BlockGetter[width * depth];
 
 		for(int cx = minChunkX; cx <= maxChunkX; cx++) {
 			for(int cz = minChunkZ; cz <= maxChunkZ; cz++) {
@@ -43,7 +45,7 @@ public class CachedCollisionReader implements ICollisionReader {
 	}
 
 	@Override
-	public TileEntity getBlockEntity(BlockPos pos) {
+	public BlockEntity getBlockEntity(BlockPos pos) {
 		return this.collisionReader.getBlockEntity(pos);
 	}
 
@@ -63,12 +65,22 @@ public class CachedCollisionReader implements ICollisionReader {
 	}
 
 	@Override
-	public Stream<VoxelShape> getEntityCollisions(Entity entity, AxisAlignedBB aabb, Predicate<Entity> predicate) {
-		return this.collisionReader.getEntityCollisions(entity, aabb, predicate);
+	public BlockGetter getChunkForCollisions(int chunkX, int chunkZ) {
+		return this.blockReaderCache[(chunkX - minChunkX) + (chunkZ - minChunkZ) * width];
 	}
 
 	@Override
-	public IBlockReader getChunkForCollisions(int chunkX, int chunkZ) {
-		return this.blockReaderCache[(chunkX - minChunkX) + (chunkZ - minChunkZ) * width];
+	public List<VoxelShape> getEntityCollisions(@Nullable Entity entity, AABB aabb) {
+		return this.collisionReader.getEntityCollisions(entity, aabb);
+	}
+
+	@Override
+	public int getHeight() {
+		return this.collisionReader.getHeight();
+	}
+
+	@Override
+	public int getMinBuildHeight() {
+		return this.collisionReader.getMinBuildHeight();
 	}
 }

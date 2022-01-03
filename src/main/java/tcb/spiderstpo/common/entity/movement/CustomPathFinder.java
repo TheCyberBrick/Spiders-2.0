@@ -13,38 +13,38 @@ import javax.annotation.Nullable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import net.minecraft.entity.MobEntity;
-import net.minecraft.pathfinding.FlaggedPathPoint;
-import net.minecraft.pathfinding.NodeProcessor;
-import net.minecraft.pathfinding.Path;
-import net.minecraft.pathfinding.PathFinder;
-import net.minecraft.pathfinding.PathHeap;
-import net.minecraft.pathfinding.PathPoint;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.Region;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.level.pathfinder.Target;
+import net.minecraft.world.level.pathfinder.NodeEvaluator;
+import net.minecraft.world.level.pathfinder.Path;
+import net.minecraft.world.level.pathfinder.PathFinder;
+import net.minecraft.world.level.pathfinder.BinaryHeap;
+import net.minecraft.world.level.pathfinder.Node;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.PathNavigationRegion;
 
 public class CustomPathFinder extends PathFinder {
-	private final PathHeap path = new PathHeap();
-	private final PathPoint[] pathOptions = new PathPoint[32];
-	private final NodeProcessor nodeProcessor;
+	private final BinaryHeap path = new BinaryHeap();
+	private final Node[] pathOptions = new Node[32];
+	private final NodeEvaluator nodeProcessor;
 
 	private int maxExpansions = 200;
 
 	public static interface Heuristic {
-		public float compute(PathPoint start, PathPoint end, boolean isTargetHeuristic);
+		public float compute(Node start, Node end, boolean isTargetHeuristic);
 	}
 
 	public static final Heuristic DEFAULT_HEURISTIC = (start, end, isTargetHeuristic) -> start.distanceManhattan(end); //distanceManhattan
 
 	private Heuristic heuristic = DEFAULT_HEURISTIC;
 
-	public CustomPathFinder(NodeProcessor processor, int maxExpansions) {
+	public CustomPathFinder(NodeEvaluator processor, int maxExpansions) {
 		super(processor, maxExpansions);
 		this.nodeProcessor = processor;
 		this.maxExpansions = maxExpansions;
 	}
 
-	public NodeProcessor getNodeProcessor() {
+	public NodeEvaluator getNodeProcessor() {
 		return this.nodeProcessor;
 	}
 
@@ -60,15 +60,15 @@ public class CustomPathFinder extends PathFinder {
 
 	@Nullable
 	@Override
-	public Path findPath(Region region, MobEntity entity, Set<BlockPos> checkpoints, float maxDistance, int checkpointRange, float maxExpansionsMultiplier) {
+	public Path findPath(PathNavigationRegion region, Mob entity, Set<BlockPos> checkpoints, float maxDistance, int checkpointRange, float maxExpansionsMultiplier) {
 		this.path.clear();
 
 		this.nodeProcessor.prepare(region, entity);
 
-		PathPoint pathpoint = this.nodeProcessor.getStart();
+		Node pathpoint = this.nodeProcessor.getStart();
 
 		//Create a checkpoint for each block pos in the checkpoints set
-		Map<FlaggedPathPoint, BlockPos> checkpointsMap = checkpoints.stream().collect(Collectors.toMap((pos) -> {
+		Map<Target, BlockPos> checkpointsMap = checkpoints.stream().collect(Collectors.toMap((pos) -> {
 			return this.nodeProcessor.getGoal(pos.getX(), pos.getY(), pos.getZ());
 		}, Function.identity()));
 
@@ -81,8 +81,8 @@ public class CustomPathFinder extends PathFinder {
 	//TODO Re-implement custom heuristics
 
 	@Nullable
-	private Path findPath(PathPoint start, Map<FlaggedPathPoint, BlockPos> checkpointsMap, float maxDistance, int checkpointRange, float maxExpansionsMultiplier) {
-		Set<FlaggedPathPoint> checkpoints = checkpointsMap.keySet();
+	private Path findPath(Node start, Map<Target, BlockPos> checkpointsMap, float maxDistance, int checkpointRange, float maxExpansionsMultiplier) {
+		Set<Target> checkpoints = checkpointsMap.keySet();
 
 		start.g = 0.0F;
 		start.h = this.computeHeuristic(start, checkpoints);
@@ -91,16 +91,16 @@ public class CustomPathFinder extends PathFinder {
 		this.path.clear();
 		this.path.insert(start);
 
-		Set<FlaggedPathPoint> reachedCheckpoints = Sets.newHashSetWithExpectedSize(checkpoints.size());
+		Set<Target> reachedCheckpoints = Sets.newHashSetWithExpectedSize(checkpoints.size());
 
 		int expansions = 0;
 		int maxExpansions = (int) (this.maxExpansions * maxExpansionsMultiplier);
 
 		while(!this.path.isEmpty() && ++expansions < maxExpansions) {
-			PathPoint openPathPoint = this.path.pop();
+			Node openPathPoint = this.path.pop();
 			openPathPoint.closed = true;
 
-			for(FlaggedPathPoint checkpoint : checkpoints) {
+			for(Target checkpoint : checkpoints) {
 				if(openPathPoint.distanceManhattan(checkpoint) <= checkpointRange) {
 					checkpoint.setReached();
 					reachedCheckpoints.add(checkpoint);
@@ -115,7 +115,7 @@ public class CustomPathFinder extends PathFinder {
 				int numOptions = this.nodeProcessor.getNeighbors(this.pathOptions, openPathPoint);
 
 				for(int i = 0; i < numOptions; ++i) {
-					PathPoint successorPathPoint = this.pathOptions[i];
+					Node successorPathPoint = this.pathOptions[i];
 
 					float costHeuristic = openPathPoint.distanceTo(successorPathPoint); //TODO Replace with cost heuristic
 
@@ -160,10 +160,10 @@ public class CustomPathFinder extends PathFinder {
 		return !path.isPresent() ? null : path.get();
 	}
 
-	private float computeHeuristic(PathPoint pathPoint, Set<FlaggedPathPoint> checkpoints) {
+	private float computeHeuristic(Node pathPoint, Set<Target> checkpoints) {
 		float minDst = Float.MAX_VALUE;
 
-		for(FlaggedPathPoint checkpoint : checkpoints) {
+		for(Target checkpoint : checkpoints) {
 			float dst = pathPoint.distanceTo(checkpoint); //TODO Replace with target heuristic
 			checkpoint.updateBest(dst, pathPoint);
 			minDst = Math.min(dst, minDst);
@@ -172,10 +172,10 @@ public class CustomPathFinder extends PathFinder {
 		return minDst;
 	}
 
-	protected Path createPath(PathPoint start, BlockPos target, boolean isTargetReached) {
-		List<PathPoint> points = Lists.newArrayList();
+	protected Path createPath(Node start, BlockPos target, boolean isTargetReached) {
+		List<Node> points = Lists.newArrayList();
 
-		PathPoint currentPathPoint = start;
+		Node currentPathPoint = start;
 		points.add(0, start);
 
 		while(currentPathPoint.cameFrom != null) {
