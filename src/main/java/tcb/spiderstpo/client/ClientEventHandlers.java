@@ -124,8 +124,8 @@ public class ClientEventHandlers {
 					Matrix4f matrix4f = matrixStack.last().pose();
 					VertexConsumer builder = bufferIn.getBuffer(RenderType.LINES);
 
-					builder.vertex(matrix4f, 0, 0, 0).color(0, 1, 1, 1).endVertex();
-					builder.vertex(matrix4f, (float) orientation.normal.x * 2, (float) orientation.normal.y * 2, (float) orientation.normal.z * 2).color(1.0f, 0.0f, 1.0f, 1.0f).endVertex();
+					builder.vertex(matrix4f, 0, 0, 0).color(0, 1, 1, 1).normal(1, 1, 1).endVertex();
+					builder.vertex(matrix4f, (float) orientation.normal.x * 2, (float) orientation.normal.y * 2, (float) orientation.normal.z * 2).color(1.0f, 0.0f, 1.0f, 1.0f).normal(1, 1, 1).endVertex();
 
 					LevelRenderer.renderLineBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AABB(0, 0, 0, 0, 0, 0).move((float) orientation.normal.x * 2, (float) orientation.normal.y * 2, (float) orientation.normal.z * 2).inflate(0.025f), 1.0f, 0.0f, 1.0f, 1.0f);
 
@@ -135,18 +135,18 @@ public class ClientEventHandlers {
 
 					matrix4f = matrixStack.last().pose();
 
-					builder.vertex(matrix4f, 0, entity.getBbHeight() * 0.5f, 0).color(0, 1, 1, 1).endVertex();
-					builder.vertex(matrix4f, (float) orientation.localX.x, entity.getBbHeight() * 0.5f + (float) orientation.localX.y, (float) orientation.localX.z).color(1.0f, 0.0f, 0.0f, 1.0f).endVertex();
+					builder.vertex(matrix4f, 0, entity.getBbHeight() * 0.5f, 0).color(0, 1, 1, 1).normal(1, 1, 1).endVertex();
+					builder.vertex(matrix4f, (float) orientation.localX.x, entity.getBbHeight() * 0.5f + (float) orientation.localX.y, (float) orientation.localX.z).color(1.0f, 0.0f, 0.0f, 1.0f).normal(1, 1, 1).endVertex();
 
 					LevelRenderer.renderLineBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AABB(0, 0, 0, 0, 0, 0).move((float) orientation.localX.x, entity.getBbHeight() * 0.5f + (float) orientation.localX.y, (float) orientation.localX.z).inflate(0.025f), 1.0f, 0.0f, 0.0f, 1.0f);
 
-					builder.vertex(matrix4f, 0, entity.getBbHeight() * 0.5f, 0).color(0, 1, 1, 1).endVertex();
-					builder.vertex(matrix4f, (float) orientation.localY.x, entity.getBbHeight() * 0.5f + (float) orientation.localY.y, (float) orientation.localY.z).color(0.0f, 1.0f, 0.0f, 1.0f).endVertex();
+					builder.vertex(matrix4f, 0, entity.getBbHeight() * 0.5f, 0).color(0, 1, 1, 1).normal(1, 1, 1).endVertex();
+					builder.vertex(matrix4f, (float) orientation.localY.x, entity.getBbHeight() * 0.5f + (float) orientation.localY.y, (float) orientation.localY.z).color(0.0f, 1.0f, 0.0f, 1.0f).normal(1, 1, 1).endVertex();
 
 					LevelRenderer.renderLineBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AABB(0, 0, 0, 0, 0, 0).move((float) orientation.localY.x, entity.getBbHeight() * 0.5f + (float) orientation.localY.y, (float) orientation.localY.z).inflate(0.025f), 0.0f, 1.0f, 0.0f, 1.0f);
 
-					builder.vertex(matrix4f, 0, entity.getBbHeight() * 0.5f, 0).color(0, 1, 1, 1).endVertex();
-					builder.vertex(matrix4f, (float) orientation.localZ.x, entity.getBbHeight() * 0.5f + (float) orientation.localZ.y, (float) orientation.localZ.z).color(0.0f, 0.0f, 1.0f, 1.0f).endVertex();
+					builder.vertex(matrix4f, 0, entity.getBbHeight() * 0.5f, 0).color(0, 1, 1, 1).normal(1, 1, 1).endVertex();
+					builder.vertex(matrix4f, (float) orientation.localZ.x, entity.getBbHeight() * 0.5f + (float) orientation.localZ.y, (float) orientation.localZ.z).color(0.0f, 0.0f, 1.0f, 1.0f).normal(1, 1, 1).endVertex();
 
 					LevelRenderer.renderLineBox(matrixStack, bufferIn.getBuffer(RenderType.LINES), new AABB(0, 0, 0, 0, 0, 0).move((float) orientation.localZ.x, entity.getBbHeight() * 0.5f + (float) orientation.localZ.y, (float) orientation.localZ.z).inflate(0.025f), 0.0f, 0.0f, 1.0f, 1.0f);
 
